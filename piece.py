@@ -1,8 +1,9 @@
 class Piece:
-    def __init__(self, x, y, clr):
+    def __init__(self, x, y, couleur):
         self.position = (x, y)
-        self.couleur = clr
-        self.coup_possible = []
+        self.couleur = couleur
+        self.coups_possibles = []
+        self.representation = ' '
 
-    def case_atteignables() -> list:
+    def cases_atteignables(plateau:list) -> list:
         return None
