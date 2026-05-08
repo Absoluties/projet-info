@@ -4,5 +4,8 @@ class Piece:
         self.couleur = clr
         self.coup_possible = []
 
+    def get_position(self):
+        return self.position
+
     def case_atteignables() -> list:
         return None
