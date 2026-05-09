@@ -18,3 +18,7 @@ class Roi(Piece):
         return L
 
     def echec(plateau: list) -> bool: ...
+
+    # TODO rédiger la méthode echec qui regarde si le roi est en échec -> Voir si echec doit être écrit ici ce n'est peut être pas le plus judicieux
+
+    # TODO rédiger une méthode echec_et_mat qui regarde si le roi est en echec et mat (i.e. roi.echec() = True et cases_atteignables = [])
