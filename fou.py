@@ -10,19 +10,43 @@ class Fou(Piece):
         L = []
         i, j = self.position
         k = 1
-        while i + k < 8 and j + k < 8 and plateau[i + k][j + k] == None:  # en bas à droite
+        while (
+            i + k < 8
+            and j + k < 8
+            and (plateau[i + k][j + k] == None or plateau[i + k][j + k].couleur != self.couleur)
+        ):  # en bas à droite
             L.append((i + k, j + k))
             k += 1
+            if plateau[i + k][j + k] != None:
+                break
         k = 1
-        while i - k > 0 and j + k < 8 and plateau[i - k][j + k] == None:  # en haut à droite
+        while (
+            i - k > 0
+            and j + k < 8
+            and (plateau[i - k][j + k] == None or plateau[i - k][j + k].couleur != self.couleur)
+        ):  # en haut à droite
             L.append((i - k, j + k))
             k += 1
+            if plateau[i - k][j + k] != None:
+                break
         k = 1
-        while i - k > 0 and j - k > 0 and plateau[i - k][j - k] == None:  # en haut à gauche
+        while (
+            i - k > 0
+            and j - k > 0
+            and (plateau[i - k][j - k] == None or plateau[i - k][j - k].couleur != self.couleur)
+        ):  # en haut à gauche
             L.append((i - k, j - k))
             k += 1
+            if plateau[i - k][j - k] != None:
+                break
         k = 1
-        while i + k < 8 and j - k > 0 and plateau[i + k][j - k] == None:  # en bas à gauche
+        while (
+            i + k < 8
+            and j - k > 0
+            and (plateau[i + k][j - k] == None or plateau[i - k][j + k].couleur != self.couleur)
+        ):  # en bas à gauche
             L.append((i + k, j - k))
             k += 1
+            if plateau[i + k][j - k] != None:
+                break
         return L

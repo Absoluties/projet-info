@@ -21,5 +21,7 @@ class Piece:
     @abstractmethod
     def case_atteignables() -> list:
         """Détermine les cases qu'une pièce peut atteindre
-        pour ensuite ne permettre de jouer que les coups légaux"""
+        pour ensuite ne permettre de jouer que les coups légaux.
+
+        Renvoie une liste de couples correspondants aux coordonnées des cases atteignables"""
         pass

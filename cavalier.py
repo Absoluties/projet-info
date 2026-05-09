@@ -20,6 +20,13 @@ class Cavalier(Piece):
             (i + 2, j + 1),
         ]
         for case in cases_candidates:
-            if plateau[case[0]][case[1]] != None and 0 <= case[0] <= 8 and 0 <= case[1] <= 8:
+            if (
+                (
+                    plateau[case[0]][case[1]] != None
+                    or plateau[case[0]][case[1]].couleur != self.couleur
+                )
+                and 0 <= case[0] <= 8
+                and 0 <= case[1] <= 8
+            ):
                 L.append(case)
         return None

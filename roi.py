@@ -11,7 +11,9 @@ class Roi(Piece):
         i, j = self.position
         for k in range(i - 1, i + 2):
             for l in range(j - 1, j + 2):
-                if (k, l) != (i, j) and plateau[k][l] == None:
+                if (k, l) != (i, j) and (
+                    plateau[k][l] == None or plateau[k][l].couleur != self.couleur
+                ):
                     L.append((k, l))
         return L
 
