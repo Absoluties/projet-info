@@ -1,41 +1,98 @@
 from abc import ABC, abstractmethod
-from partie import Partie
-from roi import Roi
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from partie import Partie
 
 class Piece(ABC):
-    def __init__(self, x:int, y:int, couleur:int, partie:Partie):
+    def __init__(self, x:int, y:int, couleur:int, partie:'Partie'):
         self.position = (x, y)
         self.couleur = couleur
         self.partie = partie
         self.coups_possibles = []
-        self.representation = " "
+        self.representation = ""
+        self.type = None
 
-    """def get_position(self):
-        return self.position
-    
-    #Méthode à revoir, je l'ai écrit ainsi comme je savais pas trop comment elle serait utilisée
-    def set_position(self, x, y):
-        if 0 <= x < 8 and 0 <= y < 8 :
-            return self.position
-        else :
-            return (0, 0)"""
+    def test_menace_pion_cavalier(self, position:tuple[int,int], type_piece:type, plateau:list):
+        x,y = position
+        if 0 <= x < 8 and 0 <= y < 8:
+            piece:Piece = plateau[x][y]
+            if not piece is None and piece.type == type_piece:
+                if piece.couleur != self.couleur:
+                    return True
+        return False
 
-    def filter_coups_forces_clouage(self,coups:list,plateau:list) -> list:
+    def test_menace_dame_fou_tour_roi(self, direction:tuple[int,int], types_pieces:type, plateau:list, max_distance:int=7):
+        x,y = self.position
+        distance = 1
+        while distance <= max_distance and 0 <= (x:=x+direction[0]) < 8 and 0 <= (y:=y+direction[1]) < 8:
+            distance += 1
+            piece:Piece = plateau[x][y]
+            if not piece is None:
+                if piece.type in types_pieces:
+                    return piece.couleur != self.couleur
+                return False
+        return False
+
+    def attaquee(self, plateau: list) -> bool:
+        positions_menaces_cavalier = [(self.position[0]+i,self.position[1]+j) for i,j in ((-1,2), (1,2), (-1,-2), (1,-2), (2,-1), (2,1), (-2,-1), (-2,1))]
+        positions_menaces_pion = [(self.position[0]+i,self.position[1] + (-1) ** self.couleur) for i in (1,-1)]
+
+        for position in positions_menaces_cavalier:
+            if self.test_menace_pion_cavalier(position, 'C', plateau):
+                return True
+        for position in positions_menaces_pion:
+            if self.test_menace_pion_cavalier(position, 'P', plateau):
+                return True
+        
+        directions_tour = ((-1,0),(0,-1),(0,1),(1,0))
+        directions_fou = ((-1,-1),(-1,1),(1,-1),(1,1))
+        
+        for direction in directions_tour:
+            if self.test_menace_dame_fou_tour_roi(direction, ('T', 'D'), plateau):
+                return True
+            if self.test_menace_dame_fou_tour_roi(direction, ('R'), plateau, 1):
+                return True
+        
+        for direction in directions_fou:
+            if self.test_menace_dame_fou_tour_roi(direction, ('F', 'D'), plateau):
+                return True
+            if self.test_menace_dame_fou_tour_roi(direction, ('R'), plateau, 1):
+                return True
+                    
+        return False
+
+    def filtrer_coups_forces_clouage(self, coups:list, plateau:list) -> list:
+        '''
+        Ici on vérifie si les coups générés précedemment génèrent des échecs, auquel cas il faut les ignorer.
+        Ainsi on simule les coups et on utilise la méthode attaquee() des rois.
+        '''
         coups_filtres = []
-        for coup in coups:
-            plateau_copie = plateau.copy()
-            plateau_copie[self.position[0]][self.position[1]], plateau_copie[self.coup[0]][self.coup[1]] = None, plateau_copie[self.position[0]][self.position[1]]
-            roi:Roi = None
-            if self.couleur: # Noir
-                roi = plateau_copie[self.partie.position_roi_noir]
-            else:
-                roi = plateau_copie[self.partie.position_roi_blanc]
-            if not roi.echec(plateau_copie):
-                coups_filtres.append(coup)
+        x1, y1 = self.position
+
+        for x2, y2 in coups:
+            piece_deplacee:Piece = plateau[x1][y1]
+            piece_capturee:Piece = plateau[x2][y2]
+
+            plateau[x1][y1] = None
+            plateau[x2][y2] = piece_deplacee
+
+            ancienne_position = self.position
+            self.position = (x2, y2)
+
+            roi:Piece = self.partie.rois[self.couleur]
+
+            if not roi.attaquee(plateau):
+                coups_filtres.append((x2, y2))
+
+            plateau[x1][y1] = piece_deplacee
+            plateau[x2][y2] = piece_capturee
+
+            self.position = ancienne_position
         return coups_filtres
 
     @abstractmethod
-    def cases_atteignables(self, plateau:list) -> list:
+    def cases_atteignables(self, plateau:list, historique:list[str]=None) -> list:
         """Détermine les cases qu'une pièce peut atteindre
         pour ensuite ne permettre de jouer que les coups légaux.
 

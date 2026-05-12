@@ -1,10 +1,13 @@
 from piece import Piece
-
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from partie import Partie
 
 class Cavalier(Piece):
-    def __init__(self, x, y, couleur):
-        super().__init__(x, y, couleur)
+    def __init__(self, x, y, couleur, partie:'Partie'):
+        super().__init__(x, y, couleur, partie)
         self.representation = "♞" if couleur else "♘"  # 0: Blanc ; 1: Noir
+        self.type = 'C'
 
     def cases_atteignables(self, plateau: list):
         L = []
@@ -22,4 +25,4 @@ class Cavalier(Piece):
         for case in cases_candidates:
             if 0 <= case[0] < 8 and 0 <= case[1] < 8 and plateau[case[0]][case[1]] != None and plateau[case[0]][case[1]].couleur != self.couleur:
                 L.append(case)
-        return self.filter_coups_forces_clouage(L)
+        return self.filtrer_coups_forces_clouage(L, plateau)

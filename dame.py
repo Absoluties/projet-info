@@ -1,65 +1,34 @@
 from piece import Piece
-
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from partie import Partie
 
 class Dame(Piece):
-    def __init__(self, x, y, couleur):
-        super().__init__(x, y, couleur)
+    def __init__(self, x, y, couleur, partie:'Partie'):
+        super().__init__(x, y, couleur, partie)
         self.representation = "♛" if couleur else "♕"  # 0: Blanc ; 1: Noir
+        self.type = 'D'
 
     def cases_atteignables(self, plateau: list):
-        """Détermine les cases où la dame peut aller"""
-        L = []  # liste des cases atteignables : à remplir
-        i, j = self.position
-        # On regarde d'abord les lignes et les colonnes
-        # On regarde à i fixé
-        k = 1
-        while j + k < 8 and (plateau[i][j + k] == None or plateau[i][j + k].couleur != self.couleur):  # on regarde à droite
-            L.append((i, j + k))
-            if plateau[i][j + k] != None:
-                break
-            k += 1
-        k = 1
-        while j - k > 0 and (plateau[i][j - k] == None or plateau[i][j - k].couleur != self.couleur):  # on regarde à gauche
-            L.append((i, j - k))
-            if plateau[i][j - k] != None:
-                break
-            k += 1
-        # On regarde maintenant à j fixé
-        k = 1
-        while i + k < 8 and (plateau[i + k][j] == None or plateau[i + k][j].couleur != self.couleur):  # on regarde au dessus
-            L.append((i + k, j))
-            if plateau[i + k][j] != None:
-                break
-            k += 1
-        k = 1
-        while i - k > 0 and (plateau[i - k][j] == None or plateau[i - k][j].couleur != self.couleur):  # on regarde en dessous
-            L.append((i - k, j))
-            if plateau[i - k][j] != None:
-                break
-            k += 1
-        # On regarde maintenant les diagonales
-        k = 1
-        while (i + k < 8 and j + k < 8 and (plateau[i + k][j + k] == None or plateau[i + k][j + k].couleur != self.couleur)):  # en bas à droite
-            L.append((i + k, j + k))
-            if plateau[i + k][j + k] != None:
-                break
-            k += 1
-        k = 1
-        while (i - k > 0 and j + k < 8 and (plateau[i - k][j + k] == None or plateau[i - k][j + k].couleur != self.couleur)):  # en haut à droite
-            L.append((i - k, j + k))
-            if plateau[i - k][j + k] != None:
-                break
-            k += 1
-        k = 1
-        while (i - k > 0 and j - k > 0 and (plateau[i - k][j - k] == None or plateau[i - k][j - k].couleur != self.couleur)):  # en haut à gauche
-            L.append((i - k, j - k))
-            if plateau[i - k][j - k] != None:
-                break
-            k += 1
-        k = 1
-        while (i - k < 8 and j - k > 0 and (plateau[i - k][j - k] == None or plateau[i - k][j + k].couleur != self.couleur)):  # en bas à gauche
-            L.append((i + k, j - k))
-            if plateau[i + k][j - k] != None:
-                break
-            k += 1
-        return self.filter_coups_forces_clouage(L)
+        L = []
+        x, y = self.position
+        directions = [
+            (1, 0), (-1, 0), (0, 1), (0, -1),   # tour
+            (1, 1), (1, -1), (-1, 1), (-1, -1)  # fou
+        ]
+        for dx, dy in directions:
+            k = 1
+            while True:
+                i = x + k * dx
+                j = y + k * dy
+                if not (0 <= i < 8 and 0 <= j < 8):
+                    break
+                piece = plateau[i][j]
+                if piece is None:
+                    L.append((i, j))
+                else:
+                    if piece.couleur != self.couleur:
+                        L.append((i, j))
+                    break
+                k += 1
+        return self.filtrer_coups_forces_clouage(L, plateau)

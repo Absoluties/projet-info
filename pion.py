@@ -1,10 +1,13 @@
 from piece import Piece
-
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from partie import Partie
 
 class Pion(Piece):
-    def __init__(self, x, y, couleur: int):
-        super().__init__(x, y, couleur)
+    def __init__(self, x, y, couleur, partie:'Partie'):
+        super().__init__(x, y, couleur, partie)
         self.representation = "♟" if couleur else "♙"  # 0: Blanc ; 1: Noir
+        self.type = 'P'
 
     def cases_atteignables(self, plateau: list):
         L = []
@@ -19,4 +22,4 @@ class Pion(Piece):
                 L.append((i - 1, j))  # on ajoute la case devant
             if i == 6 and (plateau[i - 2][j] is None or plateau[i - 2][j].couleur != self.couleur):
                 L.append((i - 2, j))  # Si le pion est sur sa case initiale il peut aussi avancer de 2 cases
-        return self.filter_coups_forces_clouage(L)
+        return self.filtrer_coups_forces_clouage(L, plateau)

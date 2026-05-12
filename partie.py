@@ -12,7 +12,7 @@ class Partie:
         self.partie_finie = False
         self.plateau = [
             [
-                Tour(0, 0, 0), self,
+                Tour(0, 0, 0, self),
                 Cavalier(0, 1, 0, self),
                 Fou(0, 2, 0, self),
                 Dame(0, 3, 0, self),
@@ -59,8 +59,10 @@ class Partie:
         self.historique: list[str] = []
         self.tour: int = 0
 
-        self.position_roi_blanc = (0, 4)
-        self.position_roi_noir = (7, 4)
+        self.rois = {
+            0: self.plateau[0][4],
+            1: self.plateau[7][4]
+        }
 
     def completer_coup_notation_abregee(self, position_arrivee: tuple[int, int], type_piece: type) -> tuple[tuple[int, int], tuple[int, int]]:
         """
@@ -70,8 +72,6 @@ class Partie:
             for j in range(8):
                 piece_sur_case:Piece = self.plateau[i][j]
                 if type(piece_sur_case) is type_piece:
-                    print('ccna', piece_sur_case.position, piece_sur_case.cases_atteignables(self.plateau))
-                    print(position_arrivee, type_piece)
                     if piece_sur_case.couleur == self.tour % 2 and position_arrivee in piece_sur_case.cases_atteignables(self.plateau):
                         return ((i, j), position_arrivee)
         return False
@@ -104,7 +104,11 @@ class Partie:
                 return False
 
     def verifier_validite_coup(self, coup: tuple[tuple[int, int], tuple[int, int]], type_piece: Piece) -> bool:
+        print(coup)
+        print(self.plateau[1])
         piece_sur_case: Piece = self.plateau[coup[0][0]][coup[0][1]]
+        print(piece_sur_case)
+        print(type(piece_sur_case) is type_piece, piece_sur_case.couleur == self.tour % 2, coup[1], piece_sur_case.cases_atteignables(self.plateau))
         if type(piece_sur_case) is type_piece and piece_sur_case.couleur == self.tour % 2 and coup[1] in piece_sur_case.cases_atteignables(self.plateau):
             return True
         return False
@@ -183,37 +187,39 @@ class Partie:
         """
         Pour vérifier la fin de la partie, il faut essayer tout les coups potentiels du joueur en échec.
         """
-        if self.tour % 2:  # Les blancs viennent de jouer
-            roi: Roi = self.plateau[self.position_roi_noir[0]][self.position_roi_noir[1]]
-        else:
-            roi: Roi = self.plateau[self.position_roi_blanc[0]][self.position_roi_blanc[1]]
-        if roi.echec(self.plateau):
+        roi:Roi = self.rois[self.tour%2]
+        if roi.attaquee(self.plateau):
             print('Roi en echec')
             for ligne in self.plateau:
                 for piece in ligne:
-                    if not piece is None:
-                        print(piece.cases_atteignables(self.plateau))
+                    if not piece is None and piece.couleur == roi.couleur:
                         if len(piece.cases_atteignables(self.plateau)):
+                            print(piece, piece.couleur, piece.position, piece.cases_atteignables(self.plateau))
                             return False
             return True
 
     def print_plateau(self):
-        res = "—.—.—.—.—.—.—.—\n"
-        for ligne in self.plateau[::-1]:
-            res += "|".join([piece.representation if piece else " " for piece in ligne])
-            res += "\n—.—.—.—.—.—.—.—\n"
-        print(res)
+        plateau_str = "\n"
+        plateau_str += "    a   b   c   d   e   f   g   h\n"
+        plateau_str += "  ┌───┬───┬───┬───┬───┬───┬───┬───┐\n"
+        for i, ligne in enumerate(self.plateau[::-1]):
+            numero_ligne = 8 - i
+            plateau_str += f"{numero_ligne} │"
+            for piece in ligne:
+                caractere = piece.representation if piece else " "
+                plateau_str += f" {caractere} │"
+            plateau_str += f" {numero_ligne}\n"
+            if i != 7:
+                plateau_str += "  ├───┼───┼───┼───┼───┼───┼───┼───┤\n"
+        plateau_str += "  └───┴───┴───┴───┴───┴───┴───┴───┘\n"
+        plateau_str += "    a   b   c   d   e   f   g   h\n"
+        print(plateau_str)
 
     def jouer_coup(self, depart: tuple[int, int], arrivee: tuple[int, int]):
         print(f'Coup joué {depart}-{arrivee}')
         self.plateau[arrivee[0]][arrivee[1]] = self.plateau[depart[0]][depart[1]]
         piece_arrivee = self.plateau[arrivee[0]][arrivee[1]]
         piece_arrivee.position = arrivee
-        if type(piece_arrivee) == Roi:
-            if piece_arrivee.couleur == 0:  # Blanc
-                self.position_roi_blanc = arrivee
-            else:
-                self.position_roi_noir = arrivee
 
         self.plateau[depart[0]][depart[1]] = None
 

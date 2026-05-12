@@ -1,10 +1,13 @@
 from piece import Piece
-
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from partie import Partie
 
 class Fou(Piece):
-    def __init__(self, x, y, couleur):
-        super().__init__(x, y, couleur)
+    def __init__(self, x, y, couleur, partie:'Partie'):
+        super().__init__(x, y, couleur, partie)
         self.representation = "♝" if couleur else "♗"  # 0: Blanc ; 1: Noir
+        self.type = 'F'
 
     def cases_atteignables(self, plateau: list):
         L = []
@@ -49,4 +52,4 @@ class Fou(Piece):
             k += 1
             if plateau[i + k][j - k] != None:
                 break
-        return self.filter_coups_forces_clouage(L)
+        return self.filtrer_coups_forces_clouage(L, plateau)
