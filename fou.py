@@ -9,7 +9,7 @@ class Fou(Piece):
         self.representation = "♝" if couleur else "♗"  # 0: Blanc ; 1: Noir
         self.type = 'F'
 
-    def cases_atteignables(self, plateau: list):
+    def cases_atteignables(self, plateau: list, historique=None):
         L = []
         i, j = self.position
         k = 1

@@ -10,7 +10,7 @@ class Roi(Piece):
         self.type = 'R'
 
 
-    def cases_atteignables(self, plateau: list) -> list:
+    def cases_atteignables(self, plateau: list, historique=None) -> list:
         L = []
         x, y = self.position
         for dx in (-1, 0, 1):

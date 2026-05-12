@@ -9,7 +9,7 @@ class Tour(Piece):
         self.representation = "♜" if couleur else "♖"  # 0: Blanc ; 1: Noir
         self.type = 'T'
 
-    def cases_atteignables(self, plateau: list) -> list:
+    def cases_atteignables(self, plateau: list, historique=None) -> list:
         """Détermine les cases où la tour peut aller"""
         L = []  # liste des cases atteignables : à remplir
         i, j = self.position

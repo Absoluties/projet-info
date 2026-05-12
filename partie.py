@@ -1,3 +1,6 @@
+from tkinter import S
+
+import piece
 from pion import Pion
 from roi import Roi
 from dame import Dame
@@ -10,7 +13,7 @@ from piece import Piece
 class Partie:
     def __init__(self):
         self.partie_finie = False
-        self.plateau = [
+        self.plateau:list[list] = [
             [
                 Tour(0, 0, 0, self),
                 Cavalier(0, 1, 0, self),
@@ -56,8 +59,9 @@ class Partie:
                 Tour(7, 7, 1, self),
             ],
         ]
-        self.historique: list[str] = []
-        self.tour: int = 0
+        self.historique:list[tuple] = []
+        self.historique_str:list[str] = []
+        self.tour:int = 0
 
         self.rois = {
             0: self.plateau[0][4],
@@ -72,7 +76,7 @@ class Partie:
             for j in range(8):
                 piece_sur_case:Piece = self.plateau[i][j]
                 if type(piece_sur_case) is type_piece:
-                    if piece_sur_case.couleur == self.tour % 2 and position_arrivee in piece_sur_case.cases_atteignables(self.plateau):
+                    if piece_sur_case.couleur == self.tour % 2 and position_arrivee in piece_sur_case.cases_atteignables(self.plateau, self.historique):
                         return ((i, j), position_arrivee)
         return False
 
@@ -104,12 +108,8 @@ class Partie:
                 return False
 
     def verifier_validite_coup(self, coup: tuple[tuple[int, int], tuple[int, int]], type_piece: Piece) -> bool:
-        print(coup)
-        print(self.plateau[1])
         piece_sur_case: Piece = self.plateau[coup[0][0]][coup[0][1]]
-        print(piece_sur_case)
-        print(type(piece_sur_case) is type_piece, piece_sur_case.couleur == self.tour % 2, coup[1], piece_sur_case.cases_atteignables(self.plateau))
-        if type(piece_sur_case) is type_piece and piece_sur_case.couleur == self.tour % 2 and coup[1] in piece_sur_case.cases_atteignables(self.plateau):
+        if type(piece_sur_case) is type_piece and piece_sur_case.couleur == self.tour % 2 and coup[1] in piece_sur_case.cases_atteignables(self.plateau, self.historique):
             return True
         return False
 
@@ -193,8 +193,7 @@ class Partie:
             for ligne in self.plateau:
                 for piece in ligne:
                     if not piece is None and piece.couleur == roi.couleur:
-                        if len(piece.cases_atteignables(self.plateau)):
-                            print(piece, piece.couleur, piece.position, piece.cases_atteignables(self.plateau))
+                        if len(piece.cases_atteignables(self.plateau, self.historique)):
                             return False
             return True
 
@@ -215,12 +214,34 @@ class Partie:
         plateau_str += "    a   b   c   d   e   f   g   h\n"
         print(plateau_str)
 
-    def jouer_coup(self, depart: tuple[int, int], arrivee: tuple[int, int]):
-        print(f'Coup joué {depart}-{arrivee}')
-        self.plateau[arrivee[0]][arrivee[1]] = self.plateau[depart[0]][depart[1]]
-        piece_arrivee = self.plateau[arrivee[0]][arrivee[1]]
-        piece_arrivee.position = arrivee
+    def ajouter_historique(self, coup:tuple[tuple,tuple]) -> None:
+        piece:Piece = self.plateau[coup[0][0]][coup[0][1]]
+        if self.plateau[coup[1][0]][coup[1][1]]:
+            separateur = 'x'
+        else:
+            separateur = '-'
+        notations_cases:list[str] = [chr(case[1] + ord("a")) + str(case[0] + 1) for case in coup]
+        self.historique.append(coup)
+        self.historique_str.append(f"{piece.type}{notations_cases[0]}{separateur}{notations_cases[1]}")
+        print(f'Coup joué {self.historique_str[-1]}')
 
+    def est_en_passant(self, depart: tuple[int, int], arrivee: tuple[int, int]) -> bool:
+        piece:Piece = self.plateau[depart[0]][depart[1]]
+        # Pion se déplaçant en diagonale vers une case vide = en passant
+        return piece is not None and piece.type == 'P' and abs(arrivee[1] - depart[1]) == 1 and self.plateau[arrivee[0]][arrivee[1]] is None
+        
+
+    def jouer_coup(self, coup: tuple[tuple[int,int], tuple[int,int]]) -> None:
+        self.ajouter_historique(coup)
+        depart, arrivee = coup
+
+        piece_depart:Piece = self.plateau[depart[0]][depart[1]]
+        piece_depart.position = arrivee
+
+        if self.est_en_passant(depart, arrivee):                         
+            self.plateau[arrivee[0] - (-1) ** piece_depart.couleur][arrivee[1]] = None
+
+        self.plateau[arrivee[0]][arrivee[1]] = self.plateau[depart[0]][depart[1]]
         self.plateau[depart[0]][depart[1]] = None
 
         self.tour += 1
@@ -234,7 +255,7 @@ class Partie:
                     if self.verifier_validite_coup(coup, type_piece):
                         break
                     print("Coup illicite, recommencez.")
-                self.jouer_coup(coup[0], coup[1])
+                self.jouer_coup(coup)
                 self.print_plateau()
                 if self.verifier_victoire():
                     print(f'Le joueur {(self.tour-1)%2} a gagné')
