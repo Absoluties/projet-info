@@ -17,12 +17,12 @@ class Roi(Piece):
             for dy in (-1, 0, 1):
                 if dx == 0 and dy == 0:
                     continue
-                x = x + dx
-                y = y + dy
-                if not (0 <= x < 8 and 0 <= y < 8):
+                x2 = x + dx
+                y2 = y + dy
+                if not (0 <= x2 < 8 and 0 <= y2 < 8):
                     continue
-                piece = plateau[x][y]
+                piece = plateau[x2][y2]
                 if piece is None or piece.couleur != self.couleur:
-                    L.append((x, y))
+                    L.append((x2, y2))
         # Le roi ne peut pas se mettre sur une case menacée
         return self.filtrer_coups_forces_clouage(L, plateau)

@@ -36,7 +36,7 @@ class Piece(ABC):
 
     def attaquee(self, plateau: list) -> bool:
         positions_menaces_cavalier = [(self.position[0]+i,self.position[1]+j) for i,j in ((-1,2), (1,2), (-1,-2), (1,-2), (2,-1), (2,1), (-2,-1), (-2,1))]
-        positions_menaces_pion = [(self.position[0]+i,self.position[1] + (-1) ** self.couleur) for i in (1,-1)]
+        positions_menaces_pion = [(self.position[0] + (-1) ** self.couleur,self.position[1] + i) for i in (1,-1)]
 
         for position in positions_menaces_cavalier:
             if self.test_menace_pion_cavalier(position, 'C', plateau):
