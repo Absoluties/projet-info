@@ -49,4 +49,4 @@ class Fou(Piece):
             k += 1
             if plateau[i + k][j - k] != None:
                 break
-        return L
+        return self.filter_coups_forces_clouage(L)

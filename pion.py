@@ -10,21 +10,13 @@ class Pion(Piece):
         L = []
         i, j = self.position
         if self.couleur == 0:  # pion blanc
-            if i + 1 <= 8 and (
-                plateau[i + 1][j] == None or plateau[i + 1][j].couleur != self.couleur
-            ):
+            if i + 1 < 8 and (plateau[i + 1][j] is None or plateau[i + 1][j].couleur != self.couleur):
                 L.append((i + 1, j))  # on ajoute la case devant
-            if i == 1 and (plateau[i + 2][j] == None or plateau[i + 2][j].couleur != self.couleur):
-                L.append(
-                    (i + 2, j)
-                )  # Si le pion est sur sa case initiale il peut aussi avancer de 2 cases
+            if i == 1 and (plateau[i + 2][j] is None or plateau[i + 2][j].couleur != self.couleur):
+                L.append((i + 2, j))  # Si le pion est sur sa case initiale il peut aussi avancer de 2 cases
         else:  # pion noir
-            if i - 1 >= 0 and (
-                plateau[i - 1][j] == None or plateau[i - 1][j].couleur != self.couleur
-            ):
+            if i - 1 >= 0 and (plateau[i - 1][j] is None or plateau[i - 1][j].couleur != self.couleur):
                 L.append((i - 1, j))  # on ajoute la case devant
-            if i == 6 and (plateau[2 - 1][j] == None or plateau[i - 2][j].couleur != self.couleur):
-                L.append(
-                    (i - 2, j)
-                )  # Si le pion est sur sa case initiale il peut aussi avancer de 2 cases
-        return None
+            if i == 6 and (plateau[i - 2][j] is None or plateau[i - 2][j].couleur != self.couleur):
+                L.append((i - 2, j))  # Si le pion est sur sa case initiale il peut aussi avancer de 2 cases
+        return self.filter_coups_forces_clouage(L)

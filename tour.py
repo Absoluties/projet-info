@@ -44,4 +44,4 @@ class Tour(Piece):
             k += 1
             if plateau[i - k][j] != None:
                 break
-        return L
+        return self.filter_coups_forces_clouage(L)

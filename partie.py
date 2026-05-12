@@ -1,4 +1,3 @@
-import numpy as np
 from pion import Pion
 from roi import Roi
 from dame import Dame
@@ -13,71 +12,69 @@ class Partie:
         self.partie_finie = False
         self.plateau = [
             [
-                Tour(0, 0, 0),
-                Cavalier(0, 1, 0),
-                Fou(0, 2, 0),
-                Dame(0, 3, 0),
-                Roi(0, 4, 0),
-                Fou(0, 5, 0),
-                Cavalier(0, 6, 0),
-                Tour(0, 7, 0),
+                Tour(0, 0, 0), self,
+                Cavalier(0, 1, 0, self),
+                Fou(0, 2, 0, self),
+                Dame(0, 3, 0, self),
+                Roi(0, 4, 0, self),
+                Fou(0, 5, 0, self),
+                Cavalier(0, 6, 0, self),
+                Tour(0, 7, 0, self),
             ],
             [
-                Pion(1, 0, 0),
-                Pion(1, 1, 0),
-                Pion(1, 2, 0),
-                Pion(1, 3, 0),
-                Pion(1, 4, 0),
-                Pion(1, 5, 0),
-                Pion(1, 6, 0),
-                Pion(1, 7, 0),
+                Pion(1, 0, 0, self),
+                Pion(1, 1, 0, self),
+                Pion(1, 2, 0, self),
+                Pion(1, 3, 0, self),
+                Pion(1, 4, 0, self),
+                Pion(1, 5, 0, self),
+                Pion(1, 6, 0, self),
+                Pion(1, 7, 0, self),
             ],
             [None] * 8,
             [None] * 8,
             [None] * 8,
             [None] * 8,
             [
-                Pion(6, 0, 1),
-                Pion(6, 1, 1),
-                Pion(6, 2, 1),
-                Pion(6, 3, 1),
-                Pion(6, 4, 1),
-                Pion(6, 5, 1),
-                Pion(6, 6, 1),
-                Pion(6, 7, 1),
+                Pion(6, 0, 1, self),
+                Pion(6, 1, 1, self),
+                Pion(6, 2, 1, self),
+                Pion(6, 3, 1, self),
+                Pion(6, 4, 1, self),
+                Pion(6, 5, 1, self),
+                Pion(6, 6, 1, self),
+                Pion(6, 7, 1, self),
             ],
             [
-                Tour(7, 0, 1),
-                Cavalier(7, 1, 1),
-                Fou(7, 2, 1),
-                Dame(7, 3, 1),
-                Roi(7, 4, 1),
-                Fou(7, 5, 1),
-                Cavalier(7, 6, 1),
-                Tour(7, 7, 1),
+                Tour(7, 0, 1, self),
+                Cavalier(7, 1, 1, self),
+                Fou(7, 2, 1, self),
+                Dame(7, 3, 1, self),
+                Roi(7, 4, 1, self),
+                Fou(7, 5, 1, self),
+                Cavalier(7, 6, 1, self),
+                Tour(7, 7, 1, self),
             ],
         ]
         self.historique: list[str] = []
         self.tour: int = 0
 
-        self.position_roi_blanc = (0, 3)
+        self.position_roi_blanc = (0, 4)
         self.position_roi_noir = (7, 4)
 
-    def completer_coup_notation_abregee(
-        self, position: tuple[int, int], type_piece: Piece
-    ) -> tuple[tuple[int, int], tuple[int, int]]:
+    def completer_coup_notation_abregee(self, position_arrivee: tuple[int, int], type_piece: type) -> tuple[tuple[int, int], tuple[int, int]]:
         """
         Il n'y a pas de manière simple de déterminer quelle est la seule pièce qui peut effectuer un certain coup, donc on vérifie toute les cases jusqu'à la trouver.
         """
         for i in range(8):
             for j in range(8):
-                piece_sur_case: Piece = self.plateau[i][j]
-                if type(piece_sur_case) != None:
-                    if (
-                        piece_sur_case.couleur == self.tour % 2
-                        and position in piece_sur_case.cases_atteignables()
-                    ):
-                        return ((i, j), position)
+                piece_sur_case:Piece = self.plateau[i][j]
+                if type(piece_sur_case) is type_piece:
+                    print('ccna', piece_sur_case.position, piece_sur_case.cases_atteignables(self.plateau))
+                    print(position_arrivee, type_piece)
+                    if piece_sur_case.couleur == self.tour % 2 and position_arrivee in piece_sur_case.cases_atteignables(self.plateau):
+                        return ((i, j), position_arrivee)
+        return False
 
     def est_case(self, case: str) -> bool:
         if len(case) == 2:
@@ -90,7 +87,6 @@ class Partie:
         if not notation.isalnum():
             return False
 
-        print(notation)
         match len(notation):
             case 2:  # Coup de pion implicite
                 return self.est_case(notation)
@@ -107,13 +103,9 @@ class Partie:
             case _:
                 return False
 
-    def verifier_validite_coup(
-        self, coup: tuple[tuple[int, int], tuple[int, int]], type_piece: Piece
-    ) -> bool:
-        piece_sur_case: Piece = self.plateau[coup[0][0], coup[0][1]]
-        if piece_sur_case.couleur != self.tour % 2:
-            return False
-        if coup[1] in piece_sur_case.cases_atteignables():
+    def verifier_validite_coup(self, coup: tuple[tuple[int, int], tuple[int, int]], type_piece: Piece) -> bool:
+        piece_sur_case: Piece = self.plateau[coup[0][0]][coup[0][1]]
+        if type(piece_sur_case) is type_piece and piece_sur_case.couleur == self.tour % 2 and coup[1] in piece_sur_case.cases_atteignables(self.plateau):
             return True
         return False
 
@@ -171,16 +163,18 @@ class Partie:
             case _:
                 raise RuntimeError()
 
-        coup_machine = coup_notation.split("")
-
+        coup_machine_str = coup_notation[:2], coup_notation[2:]
+        
         # On donne seulement la position d'arrivée : il faut déterminer la piece jouée
-        if len(coup_machine) == 1:
-            position = (ord(coup_machine[0][0]) - ord("a"), int(coup_machine[0][1]))
+        if not coup_machine_str[1]:
+            position = (int(coup_machine_str[0][1])-1, ord(coup_machine_str[0][0]) - ord("a"))
             coup_machine = self.completer_coup_notation_abregee(position, type_piece)
-        elif len(coup_machine) == 2:
+            if not coup_machine:
+                return ((0,0),(0,0)), Piece
+        else:
             coup_machine = (
-                (ord(coup_machine[0][0]) - ord("a"), int(coup_machine[0][1])),
-                (ord(coup_machine[1][0]) - ord("a"), int(coup_machine[1][1])),
+                (int(coup_machine_str[0][1])-1, ord(coup_machine_str[0][0]) - ord("a")),
+                (int(coup_machine_str[1][1])-1, ord(coup_machine_str[1][0]) - ord("a"))
             )
 
         return coup_machine, type_piece
@@ -189,17 +183,21 @@ class Partie:
         """
         Pour vérifier la fin de la partie, il faut essayer tout les coups potentiels du joueur en échec.
         """
-        if self.tour % 2:  # Les noirs viennent de jouer
-            roi: Roi = self.plateau[self.position_roi_blanc[0]][self.position_roi_blanc[1]]
-        else:
+        if self.tour % 2:  # Les blancs viennent de jouer
             roi: Roi = self.plateau[self.position_roi_noir[0]][self.position_roi_noir[1]]
-        if roi.echec():
-            ...
-
-        return False
+        else:
+            roi: Roi = self.plateau[self.position_roi_blanc[0]][self.position_roi_blanc[1]]
+        if roi.echec(self.plateau):
+            print('Roi en echec')
+            for ligne in self.plateau:
+                for piece in ligne:
+                    if not piece is None:
+                        print(piece.cases_atteignables(self.plateau))
+                        if len(piece.cases_atteignables(self.plateau)):
+                            return False
+            return True
 
     def print_plateau(self):
-        print(self.plateau)
         res = "—.—.—.—.—.—.—.—\n"
         for ligne in self.plateau[::-1]:
             res += "|".join([piece.representation if piece else " " for piece in ligne])
@@ -207,8 +205,9 @@ class Partie:
         print(res)
 
     def jouer_coup(self, depart: tuple[int, int], arrivee: tuple[int, int]):
-        self.plateau[arrivee[0], arrivee[1]] = self.plateau[depart[0], depart[1]]
-        piece_arrivee = self.plateau[arrivee[0], arrivee[1]]
+        print(f'Coup joué {depart}-{arrivee}')
+        self.plateau[arrivee[0]][arrivee[1]] = self.plateau[depart[0]][depart[1]]
+        piece_arrivee = self.plateau[arrivee[0]][arrivee[1]]
         piece_arrivee.position = arrivee
         if type(piece_arrivee) == Roi:
             if piece_arrivee.couleur == 0:  # Blanc
@@ -216,7 +215,7 @@ class Partie:
             else:
                 self.position_roi_noir = arrivee
 
-        self.plateau[depart[0], depart[1]] = None
+        self.plateau[depart[0]][depart[1]] = None
 
         self.tour += 1
 
@@ -226,10 +225,11 @@ class Partie:
             while not self.partie_finie:
                 while True:
                     coup, type_piece = self.choisir_coup_cmd()
-                    print(coup, type_piece)
                     if self.verifier_validite_coup(coup, type_piece):
                         break
                     print("Coup illicite, recommencez.")
                 self.jouer_coup(coup[0], coup[1])
                 self.print_plateau()
-                self.verifier_victoire()
+                if self.verifier_victoire():
+                    print(f'Le joueur {(self.tour-1)%2} a gagné')
+                    break
