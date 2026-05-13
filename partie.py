@@ -76,7 +76,7 @@ class Partie:
             for j in range(8):
                 piece_sur_case:Piece = self.plateau[i][j]
                 if type(piece_sur_case) is type_piece:
-                    if piece_sur_case.couleur == self.tour % 2 and position_arrivee in piece_sur_case.cases_atteignables(self.plateau, self.historique):
+                    if piece_sur_case.couleur == self.tour % 2 and position_arrivee in piece_sur_case.cases_atteignables():
                         return ((i, j), position_arrivee)
         return False
 
@@ -109,7 +109,7 @@ class Partie:
 
     def verifier_validite_coup(self, coup: tuple[tuple[int, int], tuple[int, int]], type_piece: Piece) -> bool:
         piece_sur_case: Piece = self.plateau[coup[0][0]][coup[0][1]]
-        if type(piece_sur_case) is type_piece and piece_sur_case.couleur == self.tour % 2 and coup[1] in piece_sur_case.cases_atteignables(self.plateau, self.historique):
+        if type(piece_sur_case) is type_piece and piece_sur_case.couleur == self.tour % 2 and coup[1] in piece_sur_case.cases_atteignables():
             return True
         return False
 
@@ -188,12 +188,12 @@ class Partie:
         Pour vérifier la fin de la partie, il faut essayer tout les coups potentiels du joueur en échec.
         """
         roi:Roi = self.rois[self.tour%2]
-        if roi.attaquee(self.plateau):
+        if roi.attaquee():
             print('Roi en echec')
             for ligne in self.plateau:
                 for piece in ligne:
                     if not piece is None and piece.couleur == roi.couleur:
-                        if len(piece.cases_atteignables(self.plateau, self.historique)):
+                        if len(piece.cases_atteignables()):
                             return False
             return True
 
@@ -225,12 +225,14 @@ class Partie:
         self.historique_str.append(f"{piece.type}{notations_cases[0]}{separateur}{notations_cases[1]}")
         print(f'Coup joué {self.historique_str[-1]}')
 
-    def est_en_passant(self, depart: tuple[int, int], arrivee: tuple[int, int]) -> bool:
-        piece:Piece = self.plateau[depart[0]][depart[1]]
+    def est_roque(self, piece:Piece, depart:tuple, arrivee:tuple) -> bool:
+        # Roi se déplaçant de deux cases
+        return piece is not None and piece.type == 'R' and abs(arrivee[1] - depart[1]) == 2
+
+    def est_en_passant(self, piece:Piece, depart:tuple, arrivee:tuple) -> bool:
         # Pion se déplaçant en diagonale vers une case vide = en passant
         return piece is not None and piece.type == 'P' and abs(arrivee[1] - depart[1]) == 1 and self.plateau[arrivee[0]][arrivee[1]] is None
         
-
     def jouer_coup(self, coup: tuple[tuple[int,int], tuple[int,int]]) -> None:
         self.ajouter_historique(coup)
         depart, arrivee = coup
@@ -238,8 +240,13 @@ class Partie:
         piece_depart:Piece = self.plateau[depart[0]][depart[1]]
         piece_depart.position = arrivee
 
-        if self.est_en_passant(depart, arrivee):                         
+        if self.est_en_passant(piece_depart, depart, arrivee):                         
             self.plateau[arrivee[0] - (-1) ** piece_depart.couleur][arrivee[1]] = None
+
+        if self.est_roque(piece_depart, depart, arrivee):
+            y1 = 7 * (1 + (arrivee[1]-depart[1])//2)//2
+            y2 = depart[1]+(arrivee[1]-depart[1])//2
+            self.plateau[depart[0]][y1], self.plateau[depart[0]][y2] = self.plateau[depart[0]][y2], self.plateau[depart[0]][y1]
 
         self.plateau[arrivee[0]][arrivee[1]] = self.plateau[depart[0]][depart[1]]
         self.plateau[depart[0]][depart[1]] = None

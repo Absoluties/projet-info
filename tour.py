@@ -9,42 +9,25 @@ class Tour(Piece):
         self.representation = "♜" if couleur else "♖"  # 0: Blanc ; 1: Noir
         self.type = 'T'
 
-    def cases_atteignables(self, plateau: list, historique=None) -> list:
-        """Détermine les cases où la tour peut aller"""
-        L = []  # liste des cases atteignables : à remplir
-        i, j = self.position
-        # On regarde à i fixé
-        k = 1
-        while j + k < 8 and (
-            plateau[i][j + k] == None or plateau[i][j + k].couleur != self.couleur
-        ):  # on regarde à droite
-            L.append((i, j + k))
-            k += 1
-            if plateau[i][j + k] != None:
-                break
-        k = 1
-        while j - k > 0 and (
-            plateau[i][j - k] == None or plateau[i][j - k].couleur != self.couleur
-        ):  # on regarde à gauche
-            L.append((i, j - k))
-            k += 1
-            if plateau[i][j - k] != None:
-                break
-        # On regarde maintenant à j fixé
-        k = 1
-        while i + k < 8 and (
-            plateau[i + k][j] == None or plateau[i + k][j].couleur != self.couleur
-        ):  # on regarde au dessus
-            L.append((i + k, j))
-            k += 1
-            if plateau[i + k][j] != None:
-                break
-        k = 1
-        while i - k > 0 and (
-            plateau[i - k][j] == None or plateau[i - k][j].couleur != self.couleur
-        ):  # on regarde en dessous
-            L.append((i - k, j))
-            k += 1
-            if plateau[i - k][j] != None:
-                break
-        return self.filtrer_coups_forces_clouage(L, plateau)
+    def cases_atteignables(self) -> list:
+        L = []
+        x, y = self.position
+        directions = [
+            (1, 0), (-1, 0), (0, 1), (0, -1),   # tour
+        ]
+        for dx, dy in directions:
+            k = 1
+            while True:
+                i = x + k * dx
+                j = y + k * dy
+                if not (0 <= i < 8 and 0 <= j < 8):
+                    break
+                piece = self.partie.plateau[i][j]
+                if piece is None:
+                    L.append((i, j))
+                else:
+                    if piece.couleur != self.couleur:
+                        L.append((i, j))
+                    break
+                k += 1
+        return self.filtrer_coups_forces_clouage(L, self.partie.plateau)

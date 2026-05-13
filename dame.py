@@ -9,7 +9,7 @@ class Dame(Piece):
         self.representation = "♛" if couleur else "♕"  # 0: Blanc ; 1: Noir
         self.type = 'D'
 
-    def cases_atteignables(self, plateau: list):
+    def cases_atteignables(self):
         L = []
         x, y = self.position
         directions = [
@@ -23,7 +23,7 @@ class Dame(Piece):
                 j = y + k * dy
                 if not (0 <= i < 8 and 0 <= j < 8):
                     break
-                piece = plateau[i][j]
+                piece = self.partie.plateau[i][j]
                 if piece is None:
                     L.append((i, j))
                 else:
@@ -31,4 +31,4 @@ class Dame(Piece):
                         L.append((i, j))
                     break
                 k += 1
-        return self.filtrer_coups_forces_clouage(L, plateau)
+        return self.filtrer_coups_forces_clouage(L, self.partie.plateau)
