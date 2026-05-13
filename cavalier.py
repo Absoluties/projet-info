@@ -25,4 +25,4 @@ class Cavalier(Piece):
         for case in cases_candidates:
             if 0 <= case[0] < 8 and 0 <= case[1] < 8 and (self.partie.plateau[case[0]][case[1]] is None or self.partie.plateau[case[0]][case[1]].couleur != self.couleur):
                 L.append(case)
-        return self.filtrer_coups_forces_clouage(L, self.partie.plateau)
+        return self.filtrer_coups_forces_clouage(L)

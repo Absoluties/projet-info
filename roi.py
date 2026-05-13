@@ -12,7 +12,7 @@ class Roi(Piece):
     def ajouter_cases_roque(self):
         L = []
         if self.position == (7 * self.couleur, 4) and not [coup for coup in self.partie.historique if coup[0] == (7 * self.couleur, 4)]: # Le roi n'a pas bougé
-            if not self.attaquee(self.partie.plateau):
+            if not self.attaquee():
                 x, y = self.position
                 for direction in (-1,1):
                     tour:Piece = self.partie.plateau[x][(7 + direction * 7) // 2]
@@ -28,7 +28,7 @@ class Roi(Piece):
                             self.partie.plateau[x][y+j], self.partie.plateau[self.position[0]][self.position[1]] = self.partie.plateau[self.position[0]][self.position[1]], self.partie.plateau[x][y+j]
                             self.position = (x,y+j)
 
-                            attaquee = self.attaquee(self.partie.plateau)
+                            attaquee = self.attaquee()
                             print(f'Case attaquée : {attaquee}')
 
                             self.partie.plateau[x][y+j], self.partie.plateau[x][y] = self.partie.plateau[x][y], self.partie.plateau[x][y+j]
@@ -55,4 +55,4 @@ class Roi(Piece):
                 if piece is None or piece.couleur != self.couleur:
                     L.append((x2, y2))
         # Le roi ne peut pas se mettre sur une case menacée
-        return self.filtrer_coups_forces_clouage(L, self.partie.plateau) + self.ajouter_cases_roque(self.partie.plateau, self.partie.historique)
+        return self.filtrer_coups_forces_clouage(L) + self.ajouter_cases_roque()

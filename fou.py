@@ -30,4 +30,4 @@ class Fou(Piece):
                         L.append((i, j))
                     break
                 k += 1
-        return self.filtrer_coups_forces_clouage(L, self.partie.plateau)
+        return self.filtrer_coups_forces_clouage(L)

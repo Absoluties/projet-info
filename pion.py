@@ -38,4 +38,4 @@ class Pion(Piece):
             if (piece is not None and piece.type == 'P' and piece.couleur != self.couleur and abs(x2 - x1) == 2 and x2 == i and abs(y2 - j) == 1): # Le pion adverse a fait un saut double et arrive à côté du pion
                 L.append((i + direction, y2))
 
-        return self.filtrer_coups_forces_clouage(L, self.partie.plateau)
+        return self.filtrer_coups_forces_clouage(L)

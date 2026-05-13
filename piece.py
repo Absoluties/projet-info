@@ -39,25 +39,25 @@ class Piece(ABC):
         positions_menaces_pion = [(self.position[0] + (-1) ** self.couleur,self.position[1] + i) for i in (1,-1)]
 
         for position in positions_menaces_cavalier:
-            if self.test_menace_pion_cavalier(position, 'C', self.partie.plateau):
+            if self.test_menace_pion_cavalier(position, 'C'):
                 return True
         for position in positions_menaces_pion:
-            if self.test_menace_pion_cavalier(position, 'P', self.partie.plateau):
+            if self.test_menace_pion_cavalier(position, 'P'):
                 return True
         
         directions_tour = ((-1,0),(0,-1),(0,1),(1,0))
         directions_fou = ((-1,-1),(-1,1),(1,-1),(1,1))
         
         for direction in directions_tour:
-            if self.test_menace_dame_fou_tour_roi(direction, ('T', 'D'), self.partie.plateau):
+            if self.test_menace_dame_fou_tour_roi(direction, ('T', 'D')):
                 return True
-            if self.test_menace_dame_fou_tour_roi(direction, ('R'), self.partie.plateau, 1):
+            if self.test_menace_dame_fou_tour_roi(direction, ('R'), 1):
                 return True
         
         for direction in directions_fou:
-            if self.test_menace_dame_fou_tour_roi(direction, ('F', 'D'), self.partie.plateau):
+            if self.test_menace_dame_fou_tour_roi(direction, ('F', 'D')):
                 return True
-            if self.test_menace_dame_fou_tour_roi(direction, ('R'), self.partie.plateau, 1):
+            if self.test_menace_dame_fou_tour_roi(direction, ('R'), 1):
                 return True
                     
         return False
@@ -82,7 +82,7 @@ class Piece(ABC):
 
             roi:Piece = self.partie.rois[self.couleur]
 
-            if not roi.attaquee(self.partie.plateau):
+            if not roi.attaquee():
                 coups_filtres.append((x2, y2))
 
             self.partie.plateau[x1][y1] = piece_deplacee
