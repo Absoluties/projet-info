@@ -13,7 +13,7 @@ class Piece(ABC):
         self.representation = ""
         self.type = None
 
-    def test_menace_pion_cavalier(self, position:tuple[int,int], type_piece:type):
+    def test_menace_pion_cavalier(self, position:tuple[int,int], type_piece:str):
         x,y = position
         if 0 <= x < 8 and 0 <= y < 8:
             piece:Piece = self.partie.plateau[x][y]
@@ -22,7 +22,7 @@ class Piece(ABC):
                     return True
         return False
 
-    def test_menace_dame_fou_tour_roi(self, direction:tuple[int,int], types_pieces:type, max_distance:int=7):
+    def test_menace_dame_fou_tour_roi(self, direction:tuple[int,int], types_pieces:tuple[str,...], max_distance:int=7):
         x,y = self.position
         distance = 1
         while distance <= max_distance and 0 <= (x:=x+direction[0]) < 8 and 0 <= (y:=y+direction[1]) < 8:
@@ -51,13 +51,13 @@ class Piece(ABC):
         for direction in directions_tour:
             if self.test_menace_dame_fou_tour_roi(direction, ('T', 'D')):
                 return True
-            if self.test_menace_dame_fou_tour_roi(direction, ('R'), 1):
+            if self.test_menace_dame_fou_tour_roi(direction, tuple('R'), 1):
                 return True
         
         for direction in directions_fou:
             if self.test_menace_dame_fou_tour_roi(direction, ('F', 'D')):
                 return True
-            if self.test_menace_dame_fou_tour_roi(direction, ('R'), 1):
+            if self.test_menace_dame_fou_tour_roi(direction, tuple('R'), 1):
                 return True
                     
         return False

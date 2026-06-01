@@ -71,6 +71,7 @@ class Partie:
     def completer_coup_notation_abregee(self, position_arrivee: tuple[int, int], type_piece: type) -> tuple[tuple[int, int], tuple[int, int]]:
         """
         Il n'y a pas de manière simple de déterminer quelle est la seule pièce qui peut effectuer un certain coup, donc on vérifie toute les cases jusqu'à la trouver.
+        On pourrait accélérer la fonction en cherchant depuis les cases de départs possibles selon le type de pièce mais on a pas besoin du gain de performance.
         """
         for i in range(8):
             for j in range(8):
@@ -78,7 +79,7 @@ class Partie:
                 if type(piece_sur_case) is type_piece:
                     if piece_sur_case.couleur == self.tour % 2 and position_arrivee in piece_sur_case.cases_atteignables():
                         return ((i, j), position_arrivee)
-        return False
+        return ((0,0),(0,0)) # Ce coup est toujours impossible (une pièce ne peut pas se déplacer sur elle-même)
 
     def est_case(self, case: str) -> bool:
         if len(case) == 2:
@@ -107,7 +108,7 @@ class Partie:
             case _:
                 return False
 
-    def verifier_validite_coup(self, coup: tuple[tuple[int, int], tuple[int, int]], type_piece: Piece) -> bool:
+    def verifier_validite_coup(self, coup: tuple[tuple[int, int], tuple[int, int]], type_piece: type[Piece]) -> bool:
         piece_sur_case: Piece = self.plateau[coup[0][0]][coup[0][1]]
         if type(piece_sur_case) is type_piece and piece_sur_case.couleur == self.tour % 2 and coup[1] in piece_sur_case.cases_atteignables():
             return True
@@ -173,8 +174,6 @@ class Partie:
         if not coup_machine_str[1]:
             position = (int(coup_machine_str[0][1])-1, ord(coup_machine_str[0][0]) - ord("a"))
             coup_machine = self.completer_coup_notation_abregee(position, type_piece)
-            if not coup_machine:
-                return ((0,0),(0,0)), Piece
         else:
             coup_machine = (
                 (int(coup_machine_str[0][1])-1, ord(coup_machine_str[0][0]) - ord("a")),
