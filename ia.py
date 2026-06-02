@@ -8,7 +8,7 @@ class IA(ABCMeta):
         self.niveau = niveau
     
     @abstractmethod
-    def choisir_coup() -> tuple[tuple[int,int], tuple[int,int]]:
+    def choisir_coup(self) -> tuple[tuple[int,int], tuple[int,int]]:
         ...
     
     

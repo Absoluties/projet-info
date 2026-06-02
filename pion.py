@@ -26,16 +26,16 @@ class Pion(Piece):
             x = i + direction
             y = j + dj
             if 0 <= x < 8 and 0 <= y < 8:
-                piece = self.partie.plateau[x][y]
-                if piece is not None and piece.couleur != self.couleur:
+                piece_sur_case:Piece|None = self.partie.plateau[x][y]
+                if piece_sur_case is not None and piece_sur_case.couleur != self.couleur:
                     L.append((x, y))
         # prise en passant
         if self.partie.historique:
             depart, arrivee = self.partie.historique[-1]
             x1, y1 = depart
             x2, y2 = arrivee
-            piece:Piece = self.partie.plateau[x2][y2]
-            if (piece is not None and piece.type == 'P' and piece.couleur != self.couleur and abs(x2 - x1) == 2 and x2 == i and abs(y2 - j) == 1): # Le pion adverse a fait un saut double et arrive à côté du pion
+            piece_sur_case:Piece|None = self.partie.plateau[x2][y2]
+            if (piece_sur_case is not None and piece_sur_case.type == 'P' and piece_sur_case.couleur != self.couleur and abs(x2 - x1) == 2 and x2 == i and abs(y2 - j) == 1): # Le pion adverse a fait un saut double et arrive à côté du pion
                 L.append((i + direction, y2))
 
         return self.filtrer_coups_forces_clouage(L)

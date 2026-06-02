@@ -11,33 +11,33 @@ class Roi(Piece):
 
     def ajouter_cases_roque(self):
         L = []
-        if self.position == (7 * self.couleur, 4) and not [coup for coup in self.partie.historique if coup[0] == (7 * self.couleur, 4)]: # Le roi n'a pas bougé
-            if not self.attaquee():
-                x, y = self.position
-                for direction in (-1,1):
-                    tour:Piece = self.partie.plateau[x][(7 + direction * 7) // 2]
-                    if not tour is None and tour.type == 'T' and tour.couleur == self.couleur and not [coup for coup in self.partie.historique if coup[0] == (7 * tour.couleur, (7 + direction * 7) // 2)]: # La tour n'a pas bougé
-                        
-                        for i in range(1,3):
-                            j = direction * i
-                            print(f'Test case {(x,y+j)}')
 
-                            if not self.partie.plateau[x][y+j] is None: # il faut des cases vides non menacées pour roquer
-                                break
+        if True not in self.partie.roques_possibles[self.couleur]:
+            return L
 
-                            self.partie.plateau[x][y+j], self.partie.plateau[self.position[0]][self.position[1]] = self.partie.plateau[self.position[0]][self.position[1]], self.partie.plateau[x][y+j]
-                            self.position = (x,y+j)
+        if not self.attaquee():
+            x, y = self.position
+            for direction in (-1,1): # -1 grand | 1 petit
+                if self.partie.roques_possibles[self.couleur][(1+direction)//2]:
+                    for i in range(1,3):
+                        j = direction * i
 
-                            attaquee = self.attaquee()
-                            print(f'Case attaquée : {attaquee}')
+                        if not self.partie.plateau[x][y+j] is None: # il faut des cases vides non menacées pour roquer
+                            break
 
-                            self.partie.plateau[x][y+j], self.partie.plateau[x][y] = self.partie.plateau[x][y], self.partie.plateau[x][y+j]
-                            self.position = (x,y)
+                        # On doit déplacer le Roi pour de vrai pour tester son échec
+                        self.partie.plateau[x][y+j], self.partie.plateau[self.position[0]][self.position[1]] = self.partie.plateau[self.position[0]][self.position[1]], self.partie.plateau[x][y+j]
+                        self.position = (x,y+j)
 
-                            if attaquee:
-                                break
-                        else: # aucun problème rencontré
-                            L.append((x, y+2*direction))
+                        attaquee = self.attaquee()
+
+                        self.partie.plateau[x][y+j], self.partie.plateau[x][y] = self.partie.plateau[x][y], self.partie.plateau[x][y+j]
+                        self.position = (x,y)
+
+                        if attaquee:
+                            break
+                    else: # aucun problème rencontré
+                        L.append((x, y+2*direction))
         return L
 
     def cases_atteignables(self) -> list:

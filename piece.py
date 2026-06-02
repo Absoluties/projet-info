@@ -10,13 +10,13 @@ class Piece(ABC):
         self.couleur = couleur
         self.partie = partie
         self.coups_possibles = []
-        self.representation = ""
-        self.type = None
+        self.representation = ''
+        self.type = ''
 
     def test_menace_pion_cavalier(self, position:tuple[int,int], type_piece:str):
         x,y = position
         if 0 <= x < 8 and 0 <= y < 8:
-            piece:Piece = self.partie.plateau[x][y]
+            piece:Piece|None = self.partie.plateau[x][y]
             if not piece is None and piece.type == type_piece:
                 if piece.couleur != self.couleur:
                     return True
@@ -27,7 +27,7 @@ class Piece(ABC):
         distance = 1
         while distance <= max_distance and 0 <= (x:=x+direction[0]) < 8 and 0 <= (y:=y+direction[1]) < 8:
             distance += 1
-            piece:Piece = self.partie.plateau[x][y]
+            piece:Piece|None = self.partie.plateau[x][y]
             if not piece is None:
                 if piece.type in types_pieces:
                     return piece.couleur != self.couleur
@@ -71,8 +71,8 @@ class Piece(ABC):
         x1, y1 = self.position
 
         for x2, y2 in coups:
-            piece_deplacee:Piece = self.partie.plateau[x1][y1]
-            piece_capturee:Piece = self.partie.plateau[x2][y2]
+            piece_deplacee:Piece|None = self.partie.plateau[x1][y1]
+            piece_capturee:Piece|None = self.partie.plateau[x2][y2]
 
             self.partie.plateau[x1][y1] = None
             self.partie.plateau[x2][y2] = piece_deplacee

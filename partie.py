@@ -1,6 +1,3 @@
-from gui import GUI
-from ia import IA
-
 from piece import Piece
 from pion import Pion
 from roi import Roi
@@ -13,14 +10,23 @@ from piece import Piece
 
 class Partie:
     def __init__(self):
-        self.partie_finie = False
+        self.rois = {
+            0: Roi(0, 4, 0, self),
+            1: Roi(7, 4, 1, self)
+        }
+
+        self.roques_possibles = {
+            0: [True,True], # grand, petit roque
+            1: [True, True]
+        }
+
         self.plateau:list[list[Piece|None]] = [
             [
                 Tour(0, 0, 0, self),
                 Cavalier(0, 1, 0, self),
                 Fou(0, 2, 0, self),
                 Dame(0, 3, 0, self),
-                Roi(0, 4, 0, self),
+                self.rois[0],
                 Fou(0, 5, 0, self),
                 Cavalier(0, 6, 0, self),
                 Tour(0, 7, 0, self),
@@ -54,7 +60,7 @@ class Partie:
                 Cavalier(7, 1, 1, self),
                 Fou(7, 2, 1, self),
                 Dame(7, 3, 1, self),
-                Roi(7, 4, 1, self),
+                self.rois[1],
                 Fou(7, 5, 1, self),
                 Cavalier(7, 6, 1, self),
                 Tour(7, 7, 1, self),
@@ -64,20 +70,15 @@ class Partie:
         self.historique_str:list[str] = []
         self.tour:int = 0
 
-        self.rois = {
-            0: self.plateau[0][4],
-            1: self.plateau[7][4]
-        }
-
-    def completer_coup_notation_abregee(self, position_arrivee: tuple[int, int], type_piece: type) -> tuple[tuple[int, int], tuple[int, int]]:
+    def completer_coup_notation_abregee(self, position_arrivee: tuple[int, int], type_piece: str) -> tuple[tuple[int, int], tuple[int, int]]:
         """
         Il n'y a pas de manière simple de déterminer quelle est la seule pièce qui peut effectuer un certain coup, donc on vérifie toute les cases jusqu'à la trouver.
         On pourrait accélérer la fonction en cherchant depuis les cases de départs possibles selon le type de pièce mais on a pas besoin du gain de performance.
         """
         for i in range(8):
             for j in range(8):
-                piece_sur_case:Piece = self.plateau[i][j]
-                if type(piece_sur_case) is type_piece:
+                piece_sur_case:Piece|None = self.plateau[i][j]
+                if piece_sur_case is not None and piece_sur_case.type == type_piece:
                     if piece_sur_case.couleur == self.tour % 2 and position_arrivee in piece_sur_case.cases_atteignables():
                         return ((i, j), position_arrivee)
         return ((0,0),(0,0)) # Ce coup est toujours impossible (une pièce ne peut pas se déplacer sur elle-même)
@@ -109,9 +110,9 @@ class Partie:
             case _:
                 return False
 
-    def verifier_validite_coup(self, coup: tuple[tuple[int, int], tuple[int, int]], type_piece: type[Piece]) -> bool:
-        piece_sur_case: Piece = self.plateau[coup[0][0]][coup[0][1]]
-        if type(piece_sur_case) is type_piece and piece_sur_case.couleur == self.tour % 2 and coup[1] in piece_sur_case.cases_atteignables():
+    def verifier_validite_coup(self, coup: tuple[tuple[int, int], tuple[int, int]], type_piece: str) -> bool:
+        piece_sur_case:Piece|None = self.plateau[coup[0][0]][coup[0][1]]
+        if piece_sur_case is not None and piece_sur_case.type == type_piece and piece_sur_case.couleur == self.tour % 2 and coup[1] in piece_sur_case.cases_atteignables():
             return True
         return False
 
@@ -149,22 +150,22 @@ class Partie:
 
         match coup_notation[0]:
             case "p":
-                type_piece = Pion
+                type_piece = 'P'
                 coup_notation = coup_notation[1:]
             case "r":
-                type_piece = Roi
+                type_piece = 'R'
                 coup_notation = coup_notation[1:]
             case "d":
-                type_piece = Dame
+                type_piece = 'D'
                 coup_notation = coup_notation[1:]
             case "t":
-                type_piece = Tour
+                type_piece = 'T'
                 coup_notation = coup_notation[1:]
             case "f":
-                type_piece = Fou
+                type_piece = 'F'
                 coup_notation = coup_notation[1:]
             case "c":
-                type_piece = Cavalier
+                type_piece = 'C'
                 coup_notation = coup_notation[1:]
             case _:
                 raise RuntimeError()
@@ -237,8 +238,20 @@ class Partie:
         self.ajouter_historique(coup)
         depart, arrivee = coup
 
-        piece_depart:Piece = self.plateau[depart[0]][depart[1]]
+        piece_depart:Piece|None = self.plateau[depart[0]][depart[1]]
+
+        if piece_depart is None:
+            return
+            
         piece_depart.position = arrivee
+
+        # Garder la trace des coups désactivant les roques évitent des vérifications de l'historique
+        if piece_depart.type == 'T':
+            self.roques_possibles[piece_depart.couleur][piece_depart.position[1]//7] = False
+        elif piece_depart.type == 'R':
+            self.roques_possibles[piece_depart.couleur] = [False, False]
+        if arrivee in ((0,0),(0,7),(7,0),(7,7)):
+            self.roques_possibles[(piece_depart.couleur+1)%2][arrivee[1]//7] = False
 
         if self.est_en_passant(piece_depart, depart, arrivee):                         
             self.plateau[arrivee[0] - (-1) ** piece_depart.couleur][arrivee[1]] = None
@@ -253,31 +266,14 @@ class Partie:
 
         self.tour += 1
 
-    def jouer_partie(self, mode="cmd", gui:GUI=None, ia:IA=None, trait=0):
-        match mode:
-            case "cmd": # Le mode cmd est là pour debug
-                self.print_plateau()
-                while not self.verifier_victoire():
-                    while True:
-                        coup, type_piece = self.choisir_coup_cmd()
-                        if self.verifier_validite_coup(coup, type_piece):
-                            break
-                        print("Coup illicite, recommencez.")
-                    self.jouer_coup(coup)
-                    self.print_plateau()
-                print(f'Le joueur {('Blanc','Noir')(self.tour-1)%2} a gagné')
-            case "ia":
-                if not trait: # Joueur Noir
-                    self.jouer_coup(gui.demander_coup())
-                while not self.verifier_victoire():
-                    coup_ia:tuple[tuple[int,int], tuple[int,int]] = ia.choisir_coup()
-                    self.jouer_coup(coup_ia[0],coup_ia[1])
-                    if self.verifier_victoire():
-                        break
-                    
-                    gui.demander_coup()
-            case "jcj":
-                while not self.verifier_victoire():
-                    gui.demander_coup()
-            case _:
-                RuntimeError()
+    def jouer_partie_cmd(self, mode="cmd"):
+        self.print_plateau()
+        while not self.verifier_victoire():
+            while True:
+                coup, type_piece = self.choisir_coup_cmd()
+                if self.verifier_validite_coup(coup, type_piece):
+                    break
+                print("Coup illicite, recommencez.")
+            self.jouer_coup(coup)
+            self.print_plateau()
+        print(f'Le joueur {('Blanc','Noir')[(self.tour-1)%2]} a gagné')

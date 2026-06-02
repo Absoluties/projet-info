@@ -6,7 +6,7 @@ class IARandom(IA):
     def choisir_coup(self):
         pieces_candidates:list[Piece] = []
         poids:list[float] = []
-        cases_candidates:list[tuple[tuple[int,int]]] = []
+        cases_candidates:list[tuple[tuple[int,int],...]] = []
         for ligne in self.partie.plateau:
             for piece in ligne:
                 if piece is not None:

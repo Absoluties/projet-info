@@ -6,12 +6,15 @@ from PyQt5.QtWidgets import (
     QHBoxLayout,
     QInputDialog,
     QPlainTextEdit,
+    QPushButton,
 )
 from PyQt5.QtCore import Qt, QSize
 from PyQt5.QtGui import QPainter, QColor, QFont, QMouseEvent
-from PyQt5.QtWidgets import QStyleFactory
+from PyQt5.QtWidgets import QStyleFactory, QSizePolicy
+from PyQt5.QtGui import QGuiApplication
 
 from partie import Partie
+from piece import Piece
 from pion import Pion
 from dame import Dame
 from tour import Tour
@@ -23,8 +26,9 @@ class HistoriqueCoups(QPlainTextEdit):
         super().__init__()
         self.partie = partie
         self.setReadOnly(True)
-        self.setMaximumWidth(250)
+        self.setMinimumWidth(200)
         self.setLineWrapMode(QPlainTextEdit.NoWrap)
+        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
         self.setStyleSheet("""
             QPlainTextEdit {
                 background-color: #f5f5f5;
@@ -66,6 +70,12 @@ class EchiquierUI(QWidget):
         self.taille_etiquette = 30
         self.case_selectionnee = None
         self.historique_coups: HistoriqueCoups = historique_coups
+        self.en_promotion = False
+        self.ligne_promotion = 0
+        self.colonne_promotion = 0
+        self.pieces_promotion = [Dame, Tour, Fou, Cavalier]
+        # Calculer le facteur DPI pour adapter les fonts
+        self.dpi_scale = QGuiApplication.primaryScreen().logicalDotsPerInch() / 96.0 # type: ignore
         self.init_ui()
 
     def init_ui(self):
@@ -73,6 +83,7 @@ class EchiquierUI(QWidget):
         taille_totale = taille_plateau + 2 * self.taille_etiquette
         self.setGeometry(100, 100, taille_totale, taille_totale)
         self.setWindowTitle('Jeu d\'échecs')
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
     def sizeHint(self) -> QSize:
         taille_plateau = 8 * self.taille_case
@@ -101,7 +112,8 @@ class EchiquierUI(QWidget):
                 peintre.drawRect(x, y, self.taille_case, self.taille_case)
 
         # Dessiner les étiquettes des colonnes
-        police = QFont("Arial", 12)
+        taille_police = int(self.taille_case * 0.2 * self.dpi_scale)
+        police = QFont("Arial", taille_police)
         peintre.setFont(police)
         peintre.setPen(QColor(0, 0, 0))
         for colonne in range(8):
@@ -151,9 +163,11 @@ class EchiquierUI(QWidget):
 
         self.dessiner_pieces(peintre)
         self.dessiner_surbrillances(peintre)
+        self.dessiner_promotion(peintre)
 
     def dessiner_pieces(self, peintre: QPainter):
-        police = QFont("Arial", 36, QFont.Bold)
+        taille_police = int(self.taille_case * 0.6 * self.dpi_scale)
+        police = QFont("Arial", taille_police, QFont.Bold)
         peintre.setFont(police)
 
         for ligne in range(0, 8):
@@ -202,6 +216,49 @@ class EchiquierUI(QWidget):
 
             peintre.fillRect(x, y, self.taille_case, self.taille_case, couleur)
 
+    def dessiner_promotion(self, peintre: QPainter):
+        if not self.en_promotion or self.ligne_promotion is None:
+            return
+
+        police = QFont("Arial", int(self.taille_case * 0.47 * self.dpi_scale), QFont.Bold)
+        peintre.setFont(police)
+
+        # Afficher les 4 pièces de promotion
+        for i, classe_piece in enumerate(self.pieces_promotion):
+            # Les pièces s'affichent en remontant ou en descendant selon la couleur
+            couleur:int = (self.partie.tour+1)%2
+            if couleur:
+                ligne_affichage = self.ligne_promotion + i
+            else:
+                ligne_affichage = self.ligne_promotion - i
+
+            # Vérifier que la ligne est valide
+            if not (0 <= ligne_affichage <= 7):
+                continue
+
+            ligne_affichee_ui = 7 - ligne_affichage
+            x = self.taille_etiquette + self.colonne_promotion * self.taille_case
+            y = self.taille_etiquette + ligne_affichee_ui * self.taille_case
+
+            # Fond entièrement opaque
+            couleur_fond = QColor(100, 150, 200, 255)
+            peintre.fillRect(x, y, self.taille_case, self.taille_case, couleur_fond)
+
+            # Créer une instance temporaire juste pour la représentation
+            piece_temp = classe_piece(0, 0, 0, self.partie)
+
+            # Couleur du texte
+            if couleur:
+                peintre.setPen(QColor(0, 0, 0))        # Pièces noires
+            else:
+                peintre.setPen(QColor(255, 255, 255))  # Pièces blanches
+
+            peintre.drawText(
+                x, y, self.taille_case, self.taille_case,
+                Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter,
+                piece_temp.representation,
+            )
+
     def mousePressEvent(self, a0: QMouseEvent | None):
         if a0 is None:
             return
@@ -215,91 +272,228 @@ class EchiquierUI(QWidget):
             colonne_cliquee = x // self.taille_case
             ligne_cliquee = 7 - y // self.taille_case
 
+            # Gérer la promotion
+            if self.en_promotion and self.ligne_promotion is not None:
+                couleur:int = (self.partie.tour+1)%2
+                # Calculer les lignes de promotion
+                lignes_promotion = [self.ligne_promotion + i for i in range(4)] if couleur else [self.ligne_promotion - i for i in range(4)]
+
+                # Vérifier si le clic est sur une pièce de promotion
+                for i, ligne_promo in enumerate(lignes_promotion):
+                    if 0 <= ligne_promo <= 7 and ligne_cliquee == ligne_promo and colonne_cliquee == self.colonne_promotion:
+                        classe_piece = self.pieces_promotion[i]
+                        piece_promue = classe_piece(self.ligne_promotion, self.colonne_promotion, couleur,self.partie)
+                        self.partie.plateau[self.ligne_promotion][self.colonne_promotion] = piece_promue
+                        self.en_promotion = False
+                        self.case_selectionnee = None
+                        if self.historique_coups:
+                            self.historique_coups.mettre_a_jour_coups()
+                        self.update()
+                        return
+
+                # Si le clic n'est pas sur une pièce de promotion, ignorer
+                self.update()
+                return
+
             # Vérifier si une pièce est déjà sélectionnée
             if self.case_selectionnee is not None:
                 ligne_selectionnee, colonne_selectionnee = self.case_selectionnee
-                piece_selectionnee = self.partie.plateau[ligne_selectionnee][colonne_selectionnee]
+                piece_selectionnee: Piece | None = self.partie.plateau[ligne_selectionnee][colonne_selectionnee]
 
                 if piece_selectionnee is not None:
-                    coup = ((ligne_selectionnee, colonne_selectionnee), (ligne_cliquee, colonne_cliquee))
-                    type_piece = type(piece_selectionnee)
+                    cases_atteignables = piece_selectionnee.cases_atteignables()
 
-                    # Valider le coup avant de le jouer
-                    if self.partie.verifier_validite_coup(coup, type_piece):
+                    # Si la case cliquée est dans les cases atteignables, jouer le coup
+                    if (ligne_cliquee, colonne_cliquee) in cases_atteignables:
+                        coup = ((ligne_selectionnee, colonne_selectionnee), (ligne_cliquee, colonne_cliquee))
                         self.partie.jouer_coup(coup)
-                        self.traiter_promotion(ligne_cliquee, colonne_cliquee)
+
+                        # Vérifier si c'est une promotion
+                        piece_deplacee = self.partie.plateau[ligne_cliquee][colonne_cliquee]
+                        if isinstance(piece_deplacee, Pion):
+                            est_blanc = piece_deplacee.couleur == 0
+                            ligne_promo = 7 if est_blanc else 0
+                            if ligne_cliquee == ligne_promo:
+                                self.en_promotion = True
+                                self.ligne_promotion = ligne_cliquee
+                                self.colonne_promotion = colonne_cliquee
+                                self.case_selectionnee = None
+                                self.update()
+                                return
+
                         if self.historique_coups:
                             self.historique_coups.mettre_a_jour_coups()
                         self.case_selectionnee = None
                         self.update()
                         return
 
-            # Sélectionner ou désélectionner une pièce
-            if self.partie.plateau[ligne_cliquee][colonne_cliquee] is not None:
+            # Sélectionner une pièce seulement si elle appartient au joueur actuel
+            piece = self.partie.plateau[ligne_cliquee][colonne_cliquee]
+            if piece is not None and piece.couleur == self.partie.tour % 2:
                 self.case_selectionnee = (ligne_cliquee, colonne_cliquee)
             else:
                 self.case_selectionnee = None
 
         self.update()
 
-    def traiter_promotion(self, ligne: int, colonne: int):
-        piece = self.partie.plateau[ligne][colonne]
 
-        # Vérifier si un pion a atteint la fin
-        if not isinstance(piece, Pion):
-            return
+class PanneauControle(QWidget):
+    """Right-side panel: move history + three square control buttons."""
 
-        est_blanc = piece.couleur == 0
-        ligne_promotion = 7 if est_blanc else 0
+    MODE_PVP = 0
+    MODE_PVA = 1
 
-        if ligne != ligne_promotion:
-            return
+    COULEUR_BLANC = 0
+    COULEUR_NOIR = 1
+    COULEUR_ALEATOIRE = 2
 
-        options = ["Dame", "Tour", "Fou", "Cavalier"]
-        choix, ok = QInputDialog.getItem(
-            self, "Promotion de pion", "Choisissez la pièce:", options, 0, False
-        )
+    def __init__(self, partie: Partie):
+        super().__init__()
+        self.partie = partie
 
-        if not ok:
-            return
+        # State
+        self.mode = self.MODE_PVP          # 0 = PvP, 1 = PvA
+        self.couleur_joueur = self.COULEUR_BLANC  # 0 = white, 1 = black, 2 = random
+        self.difficulte = 0                # 0-4
 
-        pieces_promotion = {
-            "Dame": Dame,
-            "Tour": Tour,
-            "Fou": Fou,
-            "Cavalier": Cavalier,
-        }
+        self._build_ui()
 
-        classe_piece = pieces_promotion[choix]
-        piece_promue = classe_piece(ligne, colonne, piece.couleur, self.partie)
-        self.partie.plateau[ligne][colonne] = piece_promue
+    # ------------------------------------------------------------------ build
+    def _build_ui(self):
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(8)
+
+        # History widget
+        self.historique = HistoriqueCoups(self.partie)
+        layout.addWidget(self.historique, stretch=1)
+
+        # Three square buttons in a row
+        boutons_layout = QHBoxLayout()
+        boutons_layout.setSpacing(6)
+        boutons_layout.setContentsMargins(0, 0, 0, 0)
+
+        COTE = 56  # square side in px
+        btn_style_base = """
+            QPushButton {{
+                font-size: 22px;
+                border: 2px solid #c8b89a;
+                border-radius: 6px;
+                background-color: {bg};
+                color: {fg};
+                min-width: {side}px;
+                max-width: {side}px;
+                min-height: {side}px;
+                max-height: {side}px;
+            }}
+            QPushButton:hover {{
+                background-color: {hover};
+                border-color: #a07850;
+            }}
+            QPushButton:pressed {{
+                background-color: {pressed};
+            }}
+            QPushButton:disabled {{
+                background-color: #e8e8e8;
+                border-color: #d0d0d0;
+                color: #b0b0b0;
+            }}
+        """
+
+        def _style(bg="#f5efe6", fg="#333", hover="#ead9c0", pressed="#d4b896"):
+            return btn_style_base.format(bg=bg, fg=fg, hover=hover, pressed=pressed, side=COTE)
+
+        # Button 1 – mode toggle
+        self.btn_mode = QPushButton("👤")
+        self.btn_mode.setToolTip("Mode : Joueur vs Joueur / Joueur vs IA")
+        self.btn_mode.setStyleSheet(_style())
+        self.btn_mode.clicked.connect(self._toggle_mode)
+
+        # Button 2 – player colour
+        self.btn_couleur = QPushButton("⬜")
+        self.btn_couleur.setToolTip("Couleur du joueur (désactivé en PvP)")
+        self.btn_couleur.setStyleSheet(_style())
+        self.btn_couleur.clicked.connect(self._toggle_couleur)
+        self.btn_couleur.setEnabled(False)  # starts disabled (PvP mode)
+
+        # Button 3 – AI difficulty
+        self.btn_difficulte = QPushButton("0")
+        self.btn_difficulte.setToolTip("Difficulté de l'IA (0-4)")
+        self.btn_difficulte.setStyleSheet(_style())
+        self.btn_difficulte.clicked.connect(self._toggle_difficulte)
+        self.btn_difficulte.setEnabled(False)
+
+        for btn in (self.btn_mode, self.btn_couleur, self.btn_difficulte):
+            boutons_layout.addWidget(btn)
+
+        layout.addLayout(boutons_layout)
+        self.setMinimumWidth(200)
+        self._refresh_buttons()
+
+    # --------------------------------------------------------------- actions
+    def _toggle_mode(self):
+        self.mode = self.MODE_PVA if self.mode == self.MODE_PVP else self.MODE_PVP
+        self._refresh_buttons()
+
+    def _toggle_couleur(self):
+        self.couleur_joueur = (self.couleur_joueur + 1) % 3
+        self._refresh_buttons()
+
+    def _toggle_difficulte(self):
+        self.difficulte = (self.difficulte + 1) % 4
+        self._refresh_buttons()
+
+    def _refresh_buttons(self):
+        # Mode button
+        if self.mode == self.MODE_PVP:
+            self.btn_mode.setText("👤")
+            self.btn_mode.setToolTip("Mode : Joueur vs Joueur (cliquer pour activer l'IA)")
+        else:
+            self.btn_mode.setText("🖥️")
+            self.btn_mode.setToolTip("Mode : Joueur vs IA (cliquer pour revenir en PvP)")
+
+        # Colour button
+        pva = (self.mode == self.MODE_PVA)
+        self.btn_couleur.setEnabled(pva)
+        self.btn_difficulte.setEnabled(pva)
+        icons = ["⬜", "⬛", "🎲"]
+        tips = ["Jouer avec les Blancs", "Jouer avec les Noirs", "Couleur aléatoire"]
+        self.btn_couleur.setText(icons[self.couleur_joueur])
+        self.btn_couleur.setToolTip(tips[self.couleur_joueur])
+
+        # Difficulty button
+        self.btn_difficulte.setText(str(self.difficulte))
+        self.btn_difficulte.setToolTip(f"Difficulté IA : {self.difficulte}/4")
+
+    # convenience accessor
+    def mettre_a_jour_coups(self):
+        self.historique.mettre_a_jour_coups()
+
 
 class GUI(QMainWindow):
     def __init__(self, partie: Partie):
         super().__init__()
         self.partie = partie
-        self.historique_coups = HistoriqueCoups(partie)
-        self.echiquier = EchiquierUI(partie, self.historique_coups)
+        self.panneau = PanneauControle(partie)
+        self.echiquier = EchiquierUI(partie, self.panneau.historique)
         self.init_ui()
 
     def init_ui(self):
-        self.setWindowTitle('Jeu d\'échecs')
+        self.setWindowTitle('Échecs')
         self.setStyle(QStyleFactory.create('Fusion'))
-        taille_plateau = 8 * self.echiquier.taille_case
-        taille_totale = taille_plateau + 2 * self.echiquier.taille_etiquette
 
-        # Créer un widget central avec une disposition horizontale
         widget_central = QWidget()
         widget_central.setStyleSheet("background-color: #ffffff;")
         disposition = QHBoxLayout(widget_central)
         disposition.setSpacing(15)
         disposition.setContentsMargins(10, 10, 10, 10)
-        disposition.addWidget(self.echiquier)
-        disposition.addWidget(self.historique_coups)
+
+        disposition.addWidget(self.echiquier, stretch=1)
+        disposition.addWidget(self.panneau, stretch=0)
+
         self.setCentralWidget(widget_central)
 
-        self.setGeometry(100, 100, taille_totale + 220, taille_totale + 50)
+        taille_plateau = 8 * self.echiquier.taille_case
+        taille_totale = taille_plateau + 2 * self.echiquier.taille_etiquette
+        self.resize(taille_totale + 300, taille_totale + 50)
         self.show()
-
-    def demander_coup():
-        ...
