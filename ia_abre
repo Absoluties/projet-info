@@ -1,0 +1,7 @@
+from ia import IA
+import random as rd
+
+
+class IA_arbe(IA):
+    def choisir_coup(self):
+        pass
