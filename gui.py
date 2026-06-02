@@ -18,7 +18,6 @@ from tour import Tour
 from fou import Fou
 from cavalier import Cavalier
 
-
 class HistoriqueCoups(QPlainTextEdit):
     def __init__(self, partie: Partie):
         super().__init__()
@@ -59,14 +58,13 @@ class HistoriqueCoups(QPlainTextEdit):
         if barre_defilement := self.verticalScrollBar():
             barre_defilement.setValue(barre_defilement.maximum())
 
-
 class EchiquierUI(QWidget):
     def __init__(self, partie: Partie, historique_coups: HistoriqueCoups):
         super().__init__()
         self.partie = partie
         self.taille_case = 60
         self.taille_etiquette = 30
-        self.piece_selectionnee = None
+        self.case_selectionnee = None
         self.historique_coups: HistoriqueCoups = historique_coups
         self.init_ui()
 
@@ -85,14 +83,13 @@ class EchiquierUI(QWidget):
         peintre = QPainter(self)
         peintre.setRenderHint(QPainter.Antialiasing)
 
-        # Dessiner les cases de l'échiquier (inversées pour que les blancs soient en bas)
+        # Dessiner les cases de l'échiquier
         for ligne in range(8):
             for colonne in range(8):
                 ligne_affichee = 7 - ligne
                 x = self.taille_etiquette + colonne * self.taille_case
                 y = self.taille_etiquette + ligne_affichee * self.taille_case
 
-                # Couleurs alternées de l'échiquier (palette moderne)
                 if (ligne + colonne) % 2 == 0:
                     couleur = QColor(240, 217, 181)  # Case claire
                 else:
@@ -103,7 +100,7 @@ class EchiquierUI(QWidget):
                 # Dessiner la bordure
                 peintre.drawRect(x, y, self.taille_case, self.taille_case)
 
-        # Dessiner les étiquettes des colonnes (a-h)
+        # Dessiner les étiquettes des colonnes
         police = QFont("Arial", 12)
         peintre.setFont(police)
         peintre.setPen(QColor(0, 0, 0))
@@ -128,7 +125,7 @@ class EchiquierUI(QWidget):
                 chr(ord("a") + colonne),
             )
 
-        # Dessiner les étiquettes des rangées (8-1, affichées de haut en bas)
+        # Dessiner les étiquettes des rangées
         for ligne in range(8):
             ligne_affichee = 7 - ligne
             y = self.taille_etiquette + ligne_affichee * self.taille_case
@@ -152,10 +149,7 @@ class EchiquierUI(QWidget):
                 rang,
             )
 
-        # Dessiner les pièces
         self.dessiner_pieces(peintre)
-
-        # Dessiner les cases en surbrillance
         self.dessiner_surbrillances(peintre)
 
     def dessiner_pieces(self, peintre: QPainter):
@@ -170,7 +164,7 @@ class EchiquierUI(QWidget):
                     x = self.taille_etiquette + colonne * self.taille_case
                     y = self.taille_etiquette + ligne_affichee * self.taille_case
 
-                    # Dessiner le texte de la pièce (couleurs inversées pour Unicode)
+                    # Dessiner le texte de la pièce (couleurs inversées à cause d'Unicode)
                     if piece.couleur == 0:
                         peintre.setPen(QColor(255, 255, 255))  # Pièces blanches
                     else:
@@ -186,10 +180,10 @@ class EchiquierUI(QWidget):
                     )
 
     def dessiner_surbrillances(self, peintre: QPainter):
-        if self.piece_selectionnee is None:
+        if self.case_selectionnee is None:
             return
 
-        ligne, colonne = self.piece_selectionnee
+        ligne, colonne = self.case_selectionnee
         piece = self.partie.plateau[ligne][colonne]
         if piece is None:
             return
@@ -216,36 +210,35 @@ class EchiquierUI(QWidget):
         y = a0.y() - self.taille_etiquette
 
         if x < 0 or y < 0 or x >= 8 * self.taille_case or y >= 8 * self.taille_case:
-            self.piece_selectionnee = None
+            self.case_selectionnee = None
         else:
-            colonne = x // self.taille_case
-            ligne_affichee = y // self.taille_case
-            ligne = 7 - ligne_affichee
+            colonne_cliquee = x // self.taille_case
+            ligne_cliquee = 7 - y // self.taille_case
 
             # Vérifier si une pièce est déjà sélectionnée
-            if self.piece_selectionnee is not None:
-                ligne_selectionnee, colonne_selectionnee = self.piece_selectionnee
+            if self.case_selectionnee is not None:
+                ligne_selectionnee, colonne_selectionnee = self.case_selectionnee
                 piece_selectionnee = self.partie.plateau[ligne_selectionnee][colonne_selectionnee]
 
                 if piece_selectionnee is not None:
-                    coup = ((ligne_selectionnee, colonne_selectionnee), (ligne, colonne))
+                    coup = ((ligne_selectionnee, colonne_selectionnee), (ligne_cliquee, colonne_cliquee))
                     type_piece = type(piece_selectionnee)
 
                     # Valider le coup avant de le jouer
                     if self.partie.verifier_validite_coup(coup, type_piece):
                         self.partie.jouer_coup(coup)
-                        self.traiter_promotion(ligne, colonne)
+                        self.traiter_promotion(ligne_cliquee, colonne_cliquee)
                         if self.historique_coups:
                             self.historique_coups.mettre_a_jour_coups()
-                        self.piece_selectionnee = None
+                        self.case_selectionnee = None
                         self.update()
                         return
 
             # Sélectionner ou désélectionner une pièce
-            if self.partie.plateau[ligne][colonne] is not None:
-                self.piece_selectionnee = (ligne, colonne)
+            if self.partie.plateau[ligne_cliquee][colonne_cliquee] is not None:
+                self.case_selectionnee = (ligne_cliquee, colonne_cliquee)
             else:
-                self.piece_selectionnee = None
+                self.case_selectionnee = None
 
         self.update()
 
@@ -281,8 +274,7 @@ class EchiquierUI(QWidget):
         piece_promue = classe_piece(ligne, colonne, piece.couleur, self.partie)
         self.partie.plateau[ligne][colonne] = piece_promue
 
-
-class FenetreEchiquier(QMainWindow):
+class GUI(QMainWindow):
     def __init__(self, partie: Partie):
         super().__init__()
         self.partie = partie
@@ -308,3 +300,6 @@ class FenetreEchiquier(QMainWindow):
 
         self.setGeometry(100, 100, taille_totale + 220, taille_totale + 50)
         self.show()
+
+    def demander_coup():
+        ...

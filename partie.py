@@ -1,6 +1,7 @@
-from tkinter import S
+from gui import GUI
+from ia import IA
 
-import piece
+from piece import Piece
 from pion import Pion
 from roi import Roi
 from dame import Dame
@@ -13,7 +14,7 @@ from piece import Piece
 class Partie:
     def __init__(self):
         self.partie_finie = False
-        self.plateau:list[list] = [
+        self.plateau:list[list[Piece|None]] = [
             [
                 Tour(0, 0, 0, self),
                 Cavalier(0, 1, 0, self),
@@ -252,17 +253,31 @@ class Partie:
 
         self.tour += 1
 
-    def jouer_partie(self, mode="cmd"):
-        if mode == "cmd":
-            self.print_plateau()
-            while not self.partie_finie:
-                while True:
-                    coup, type_piece = self.choisir_coup_cmd()
-                    if self.verifier_validite_coup(coup, type_piece):
-                        break
-                    print("Coup illicite, recommencez.")
-                self.jouer_coup(coup)
+    def jouer_partie(self, mode="cmd", gui:GUI=None, ia:IA=None, trait=0):
+        match mode:
+            case "cmd": # Le mode cmd est là pour debug
                 self.print_plateau()
-                if self.verifier_victoire():
-                    print(f'Le joueur {(self.tour-1)%2} a gagné')
-                    break
+                while not self.verifier_victoire():
+                    while True:
+                        coup, type_piece = self.choisir_coup_cmd()
+                        if self.verifier_validite_coup(coup, type_piece):
+                            break
+                        print("Coup illicite, recommencez.")
+                    self.jouer_coup(coup)
+                    self.print_plateau()
+                print(f'Le joueur {('Blanc','Noir')(self.tour-1)%2} a gagné')
+            case "ia":
+                if not trait: # Joueur Noir
+                    self.jouer_coup(gui.demander_coup())
+                while not self.verifier_victoire():
+                    coup_ia:tuple[tuple[int,int], tuple[int,int]] = ia.choisir_coup()
+                    self.jouer_coup(coup_ia[0],coup_ia[1])
+                    if self.verifier_victoire():
+                        break
+                    
+                    gui.demander_coup()
+            case "jcj":
+                while not self.verifier_victoire():
+                    gui.demander_coup()
+            case _:
+                RuntimeError()

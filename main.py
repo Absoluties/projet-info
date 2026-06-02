@@ -2,7 +2,7 @@ import sys
 from PyQt5.QtWidgets import QApplication
 
 from partie import Partie
-from gui import FenetreEchiquier
+from gui import GUI
 
 
 if __name__ == '__main__':
@@ -12,5 +12,5 @@ if __name__ == '__main__':
         partie.jouer_partie(mode='cmd')
     else:
         app = QApplication(sys.argv)
-        fenetre = FenetreEchiquier(partie)
+        fenetre = GUI(partie)
         sys.exit(app.exec_())

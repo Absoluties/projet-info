@@ -92,7 +92,7 @@ class Piece(ABC):
         return coups_filtres
 
     @abstractmethod
-    def cases_atteignables(self) -> list:
+    def cases_atteignables(self) -> list[tuple[int,int]]:
         """Détermine les cases qu'une pièce peut atteindre
         pour ensuite ne permettre de jouer que les coups légaux.
 
