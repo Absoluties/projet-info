@@ -1,0 +1,18 @@
+from ia import IA
+import random as rd
+
+
+class IA_random(IA):
+    def choisir_coup(self, plateau):
+        L = []
+        for ligne in plateau:
+            for case in ligne:
+                if case is not None:
+                    possibilite_piece = case.cases_atteignables()
+                    if len(possibilite_piece) == 0:
+                        pass
+                    else:
+                        L.append(possibilite_piece)
+            piece_a_jouer = L[rd.randint(0, len(L))]
+            coup_a_jouer = piece_a_jouer[rd.randint(len(piece_a_jouer))]
+            return piece_a_jouer
