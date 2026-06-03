@@ -1,3 +1,4 @@
+# écrit par Valentin
 import copy
 import sys
 import os
@@ -11,6 +12,9 @@ if TYPE_CHECKING:
 
 
 class IA_fort(IA):
+    """Version évoluée de l'IA utilisant l'algorithme minimax
+    avec élagage alpha-beta (ignorer certains coups a priori peu intéressants)"""
+
     def __init__(self, niveau: int, partie: "Partie"):
         super().__init__(niveau, partie)
 
@@ -23,13 +27,15 @@ class IA_fort(IA):
             for j in range(8):
                 piece = partie_etat.plateau[i][j]
                 if piece is not None and piece.couleur == couleur:
-                    # cases_atteignables() élimine déjà le clouage et les échecs automatiques
                     for case_destination in piece.cases_atteignables():
                         coups.append((piece.position, case_destination))
         return coups
 
     def _evaluer(self, partie_etat: "Partie", couleur_ia: int) -> int:
-        """Fonction d'évaluation matérielle basée sur les types de pièces du projet"""
+        """Fonction d'évaluation du gain associé à un coup.
+        Ce gain correspond simplement aux pièces encore
+        présentes sur l'échiquier pondéré par leurs valeurs.
+        La pondération est négative pour le joueur."""
         valeurs = {"P": 10, "C": 30, "F": 30, "T": 50, "D": 90, "R": 900}
         score = 0
         for i in range(8):
@@ -52,7 +58,8 @@ class IA_fort(IA):
         est_max: bool,
         couleur_ia: int,
     ) -> int:
-        # determiner qui doit vitruellement jouer
+        """Algorithme récursif minimax calculant le coup plus avantageux"""
+        # determiner qui doit jouer (dans la partie virtuelle sur laquelle l'algorithme calcule)
         couleur_actuelle = couleur_ia if est_max else (1 - couleur_ia)
         coups_legaux = self._get_tous_coups_legaux(partie_etat, couleur_actuelle)
 
@@ -61,14 +68,14 @@ class IA_fort(IA):
             if not coups_legaux:
                 roi = partie_etat.rois[couleur_actuelle]
                 if roi.attaquee():
-                    # Échec et mat : gain extremement faible/élevé selon si c'est virtuellement le tour de l'IA ou du joueur
+                    # Échec et mat représenté par ungain extremement élevé (en valeur absolue)
                     return -10000 - profondeur if est_max else 10000 + profondeur
                 else:
-                    # Pat (Match nul)
+                    # Pat
                     return 0
             return self._evaluer(partie_etat, couleur_ia)
 
-        if est_max:
+        if est_max:  # si l'IA joue (tour virtuel)
             val_max = float("-inf")
             for coup in coups_legaux:
                 partie_virtuelle = copy.deepcopy(partie_etat)
@@ -80,9 +87,9 @@ class IA_fort(IA):
                 val_max = max(val_max, score)
                 alpha = max(alpha, val_max)
                 if beta <= alpha:
-                    break  # Élagage Bêta
+                    break  # Élagage c-à-d on néglige les coups a priori inintéressants pour l'IA
             return val_max
-        else:
+        else:  # Si le joueur joue (tour virtuel, en considérant qu'il joue avec la même méthode que l'IA)
             val_min = float("inf")
             for coup in coups_legaux:
                 partie_virtuelle = copy.deepcopy(partie_etat)
@@ -94,7 +101,7 @@ class IA_fort(IA):
                 val_min = min(val_min, score)
                 beta = min(beta, val_min)
                 if beta <= alpha:
-                    break  # Élagage Alpha
+                    break  # Élagage des coups côté joueur
             return val_min
 
     def choisir_coup(self) -> tuple[tuple[int, int], tuple[int, int]]:
@@ -110,11 +117,11 @@ class IA_fort(IA):
         alpha = float("-inf")
         beta = float("inf")
 
-        for coup in coups_legaux:
+        for (
+            coup
+        ) in coups_legaux:  # application de minimax et tri des coups en fonction de leurs scores
             partie_virtuelle = copy.deepcopy(self.partie)
             partie_virtuelle.jouer_coup(coup)
-            # Le coup joué par l'IA amène au tour de l'adversaire (est_max = False)
-            # self.niveau détermine la profondeur max (ex: 3 pour calculer 3 coups à l'avance)
             score = self._minimax(partie_virtuelle, self.niveau - 1, alpha, beta, False, couleur_ia)
 
             if score > meilleur_score:
