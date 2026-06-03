@@ -1,14 +1,15 @@
-from partie import Partie
+from typing import TYPE_CHECKING
 from piece import Piece
-from abc import abstractmethod, ABCMeta
+from abc import abstractmethod, ABC
 
-class IA(ABCMeta):
-    def __init__(self, niveau:int, partie:Partie):
+if TYPE_CHECKING:
+    from partie import Partie
+
+
+class IA(ABC):
+    def __init__(self, niveau: int, partie: "Partie"):
         self.partie = partie
         self.niveau = niveau
-    
+
     @abstractmethod
-    def choisir_coup(self) -> tuple[tuple[int,int], tuple[int,int]]:
-        ...
-    
-    
+    def choisir_coup(self) -> tuple[tuple[int, int], tuple[int, int]]: ...
