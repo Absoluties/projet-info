@@ -1,4 +1,6 @@
 from PyQt5.QtWidgets import (
+    QStyleFactory,
+    QSizePolicy,
     QApplication,
     QMainWindow,
     QWidget,
@@ -6,12 +8,13 @@ from PyQt5.QtWidgets import (
     QHBoxLayout,
     QInputDialog,
     QPlainTextEdit,
-    QPushButton,
+    QPushButton
 )
-from PyQt5.QtCore import Qt, QSize
+from PyQt5.QtCore import Qt, QSize, QRectF
 from PyQt5.QtGui import QPainter, QColor, QFont, QMouseEvent
-from PyQt5.QtWidgets import QStyleFactory, QSizePolicy
 from PyQt5.QtGui import QGuiApplication
+from PyQt5.QtSvg import QSvgRenderer
+import os
 
 from partie import Partie
 from piece import Piece
@@ -22,22 +25,22 @@ from fou import Fou
 from cavalier import Cavalier
 
 class HistoriqueCoups(QPlainTextEdit):
-    def __init__(self, partie: Partie):
+    def __init__(self, partie: Partie, echelle_police:float):
         super().__init__()
         self.partie = partie
         self.setReadOnly(True)
         self.setMinimumWidth(200)
         self.setLineWrapMode(QPlainTextEdit.NoWrap)
-        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
-        self.setStyleSheet("""
-            QPlainTextEdit {
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.setStyleSheet(f"""
+            QPlainTextEdit {{
                 background-color: #f5f5f5;
                 color: #333333;
                 border: 1px solid #e0e0e0;
                 font-family: 'Consolas', 'Monaco', monospace;
-                font-size: 11pt;
+                font-size: {echelle_police*4}pt;
                 padding: 10px;
-            }
+            }}
         """)
         self.mettre_a_jour_coups()
 
@@ -50,7 +53,6 @@ class HistoriqueCoups(QPlainTextEdit):
             coup_blanc = coups[i] if i < len(coups) else ""
             coup_noir = coups[i + 1] if i + 1 < len(coups) else ""
 
-            # Aligner tous les points
             ligne_coup = f"{numero_coup:2}. {coup_blanc:<11}"
             if coup_noir:
                 ligne_coup += f" {coup_noir}"
@@ -58,12 +60,11 @@ class HistoriqueCoups(QPlainTextEdit):
             texte += ligne_coup + "\n"
 
         self.setPlainText(texte)
-        # Scroller vers le bas
         if barre_defilement := self.verticalScrollBar():
             barre_defilement.setValue(barre_defilement.maximum())
 
-class EchiquierUI(QWidget):
-    def __init__(self, partie: Partie, historique_coups: HistoriqueCoups):
+class Echiquier(QWidget):
+    def __init__(self, partie: Partie, historique_coups: HistoriqueCoups, echelle_police:float):
         super().__init__()
         self.partie = partie
         self.taille_case = 60
@@ -74,8 +75,7 @@ class EchiquierUI(QWidget):
         self.ligne_promotion = 0
         self.colonne_promotion = 0
         self.pieces_promotion = [Dame, Tour, Fou, Cavalier]
-        # Calculer le facteur DPI pour adapter les fonts
-        self.dpi_scale = QGuiApplication.primaryScreen().logicalDotsPerInch() / 96.0 # type: ignore
+        self.echelle_police = echelle_police
         self.init_ui()
 
     def init_ui(self):
@@ -112,7 +112,7 @@ class EchiquierUI(QWidget):
                 peintre.drawRect(x, y, self.taille_case, self.taille_case)
 
         # Dessiner les étiquettes des colonnes
-        taille_police = int(self.taille_case * 0.2 * self.dpi_scale)
+        taille_police = int(self.taille_case * 0.1 * self.echelle_police)
         police = QFont("Arial", taille_police)
         peintre.setFont(police)
         peintre.setPen(QColor(0, 0, 0))
@@ -166,32 +166,26 @@ class EchiquierUI(QWidget):
         self.dessiner_promotion(peintre)
 
     def dessiner_pieces(self, peintre: QPainter):
-        taille_police = int(self.taille_case * 0.6 * self.dpi_scale)
-        police = QFont("Arial", taille_police, QFont.Bold)
-        peintre.setFont(police)
+        padding = int(self.taille_case * 0.05)
+        taille = self.taille_case - 2 * padding
 
-        for ligne in range(0, 8):
+        for ligne in range(8):
             for colonne in range(8):
                 piece = self.partie.plateau[ligne][colonne]
-                if piece is not None:
-                    ligne_affichee = 7 - ligne
-                    x = self.taille_etiquette + colonne * self.taille_case
-                    y = self.taille_etiquette + ligne_affichee * self.taille_case
+                if piece is None:
+                    continue
 
-                    # Dessiner le texte de la pièce (couleurs inversées à cause d'Unicode)
-                    if piece.couleur == 0:
-                        peintre.setPen(QColor(255, 255, 255))  # Pièces blanches
-                    else:
-                        peintre.setPen(QColor(0, 0, 0))        # Pièces noires
+                ligne_affichee = 7 - ligne
+                x = self.taille_etiquette + colonne * self.taille_case + padding
+                y = self.taille_etiquette + ligne_affichee * self.taille_case + padding
 
-                    peintre.drawText(
-                        x,
-                        y,
-                        self.taille_case,
-                        self.taille_case,
-                        Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter,
-                        piece.representation,
-                    )
+                chemin_svg = f'svgs/{piece.type.lower()}{piece.couleur}.svg'
+
+                if not os.path.isfile(chemin_svg):
+                    continue  # skip if SVG not found
+
+                renderer = QSvgRenderer(chemin_svg)
+                renderer.render(peintre, QRectF(x, y, taille, taille))
 
     def dessiner_surbrillances(self, peintre: QPainter):
         if self.case_selectionnee is None:
@@ -220,7 +214,7 @@ class EchiquierUI(QWidget):
         if not self.en_promotion or self.ligne_promotion is None:
             return
 
-        police = QFont("Arial", int(self.taille_case * 0.47 * self.dpi_scale), QFont.Bold)
+        police = QFont("Arial", int(self.taille_case * 0.47 * self.echelle_police), QFont.Bold)
         peintre.setFont(police)
 
         # Afficher les 4 pièces de promotion
@@ -337,9 +331,7 @@ class EchiquierUI(QWidget):
         self.update()
 
 
-class PanneauControle(QWidget):
-    """Right-side panel: move history + three square control buttons."""
-
+class PanneauLateral(QWidget):
     MODE_PVP = 0
     MODE_PVA = 1
 
@@ -347,34 +339,32 @@ class PanneauControle(QWidget):
     COULEUR_NOIR = 1
     COULEUR_ALEATOIRE = 2
 
-    def __init__(self, partie: Partie):
+    def __init__(self, partie: Partie, echelle_police:float):
         super().__init__()
         self.partie = partie
+        self.echelle_police = echelle_police
 
         # State
-        self.mode = self.MODE_PVP          # 0 = PvP, 1 = PvA
-        self.couleur_joueur = self.COULEUR_BLANC  # 0 = white, 1 = black, 2 = random
-        self.difficulte = 0                # 0-4
+        self.mode = self.MODE_PVP
+        self.couleur_joueur = self.COULEUR_BLANC # 0 blanc, 1 noir, 2 aleatoire
+        self.difficulte = 0
 
-        self._build_ui()
+        self.ajouter_boutons()
 
-    # ------------------------------------------------------------------ build
-    def _build_ui(self):
+    def ajouter_boutons(self):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(8)
 
-        # History widget
-        self.historique = HistoriqueCoups(self.partie)
+        self.historique = HistoriqueCoups(self.partie, self.echelle_police)
         layout.addWidget(self.historique, stretch=1)
 
-        # Three square buttons in a row
         boutons_layout = QHBoxLayout()
         boutons_layout.setSpacing(6)
         boutons_layout.setContentsMargins(0, 0, 0, 0)
 
-        COTE = 56  # square side in px
-        btn_style_base = """
+        COTE = 56 
+        bouton_style_base = """
             QPushButton {{
                 font-size: 22px;
                 border: 2px solid #c8b89a;
@@ -401,49 +391,70 @@ class PanneauControle(QWidget):
         """
 
         def _style(bg="#f5efe6", fg="#333", hover="#ead9c0", pressed="#d4b896"):
-            return btn_style_base.format(bg=bg, fg=fg, hover=hover, pressed=pressed, side=COTE)
+            return bouton_style_base.format(bg=bg, fg=fg, hover=hover, pressed=pressed, side=COTE)
 
-        # Button 1 – mode toggle
         self.btn_mode = QPushButton("👤")
         self.btn_mode.setToolTip("Mode : Joueur vs Joueur / Joueur vs IA")
         self.btn_mode.setStyleSheet(_style())
-        self.btn_mode.clicked.connect(self._toggle_mode)
+        self.btn_mode.clicked.connect(self.cycler_mode_jeu)
 
-        # Button 2 – player colour
         self.btn_couleur = QPushButton("⬜")
-        self.btn_couleur.setToolTip("Couleur du joueur (désactivé en PvP)")
+        self.btn_couleur.setToolTip("Couleur du joueur")
         self.btn_couleur.setStyleSheet(_style())
-        self.btn_couleur.clicked.connect(self._toggle_couleur)
-        self.btn_couleur.setEnabled(False)  # starts disabled (PvP mode)
+        self.btn_couleur.clicked.connect(self.cycler_couleur)
+        self.btn_couleur.setEnabled(False)
 
-        # Button 3 – AI difficulty
         self.btn_difficulte = QPushButton("0")
-        self.btn_difficulte.setToolTip("Difficulté de l'IA (0-4)")
+        self.btn_difficulte.setToolTip("Difficulté de l'IA")
         self.btn_difficulte.setStyleSheet(_style())
-        self.btn_difficulte.clicked.connect(self._toggle_difficulte)
+        self.btn_difficulte.clicked.connect(self.cycler_difficulte)
         self.btn_difficulte.setEnabled(False)
 
-        for btn in (self.btn_mode, self.btn_couleur, self.btn_difficulte):
-            boutons_layout.addWidget(btn)
+        for bouton in (self.btn_mode, self.btn_couleur, self.btn_difficulte):
+            boutons_layout.addWidget(bouton)
 
         layout.addLayout(boutons_layout)
+        
+        # Bouton Jouer
+        self.btn_jouer = QPushButton("Jouer")
+        self.btn_jouer.setToolTip("Démarrer la partie")
+        self.btn_jouer.setStyleSheet("""
+            QPushButton {
+                font-size: 16px;
+                font-weight: bold;
+                border: 2px solid #2d7a2d;
+                border-radius: 6px;
+                background-color: #4caf50;
+                color: white;
+                min-height: 40px;
+                padding: 0 12px;
+            }
+            QPushButton:hover {
+                background-color: #43a047;
+                border-color: #1b5e1b;
+            }
+            QPushButton:pressed {
+                background-color: #388e3c;
+            }
+        """)
+        self.btn_jouer.clicked.connect(self.on_jouer)
+        layout.addWidget(self.btn_jouer)
         self.setMinimumWidth(200)
-        self._refresh_buttons()
+        self.rafraichir_boutons()
 
-    # --------------------------------------------------------------- actions
-    def _toggle_mode(self):
+    def cycler_mode_jeu(self):
         self.mode = self.MODE_PVA if self.mode == self.MODE_PVP else self.MODE_PVP
-        self._refresh_buttons()
+        self.rafraichir_boutons()
 
-    def _toggle_couleur(self):
+    def cycler_couleur(self):
         self.couleur_joueur = (self.couleur_joueur + 1) % 3
-        self._refresh_buttons()
+        self.rafraichir_boutons()
 
-    def _toggle_difficulte(self):
+    def cycler_difficulte(self):
         self.difficulte = (self.difficulte + 1) % 4
-        self._refresh_buttons()
+        self.rafraichir_boutons()
 
-    def _refresh_buttons(self):
+    def rafraichir_boutons(self):
         # Mode button
         if self.mode == self.MODE_PVP:
             self.btn_mode.setText("👤")
@@ -465,17 +476,19 @@ class PanneauControle(QWidget):
         self.btn_difficulte.setText(str(self.difficulte))
         self.btn_difficulte.setToolTip(f"Difficulté IA : {self.difficulte}/4")
 
-    # convenience accessor
     def mettre_a_jour_coups(self):
         self.historique.mettre_a_jour_coups()
 
+    def on_jouer(self):
+        ...
 
 class GUI(QMainWindow):
     def __init__(self, partie: Partie):
         super().__init__()
+        echelle_police = QGuiApplication.primaryScreen().logicalDotsPerInch() / 96.0
         self.partie = partie
-        self.panneau = PanneauControle(partie)
-        self.echiquier = EchiquierUI(partie, self.panneau.historique)
+        self.panneau = PanneauLateral(partie, echelle_police)
+        self.echiquier = Echiquier(partie, self.panneau.historique, echelle_police)
         self.init_ui()
 
     def init_ui(self):
