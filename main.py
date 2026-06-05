@@ -10,7 +10,7 @@ if __name__ == "__main__":
     partie = Partie()
 
     if "--cmd" in sys.argv:
-        partie.jouer_partie_cmd(mode="cmd")
+        partie.jouer_partie_cmd()
     else:
         app = QApplication(sys.argv)
         fenetre = GUI(partie)

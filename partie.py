@@ -290,16 +290,9 @@ class Partie:
         self.tour += 1
         self.ajouter_historique(depart, arrivee, piece_depart, ep or piece_arrivee is not None, roque, ep)
 
-    def jouer_partie_cmd(self, mode="cmd"):
+    def jouer_partie_cmd(self):
         self.print_plateau()
-        ia = IA_fort(4, self)
         while not self.verifier_victoire():
-            if self.tour % 2 == 1:
-                print("Coup de l'IA")
-                coup = ia.choisir_coup()
-                self.jouer_coup(coup)
-                self.print_plateau()
-                continue
             while True:
                 coup, type_piece = self.choisir_coup_cmd()
                 if self.verifier_validite_coup(coup, type_piece):
