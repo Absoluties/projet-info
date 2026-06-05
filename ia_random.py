@@ -6,13 +6,14 @@ class IARandom(IA):
     def choisir_coup(self):
         pieces_candidates:list[Piece] = []
         poids:list[float] = []
-        cases_candidates:list[tuple[tuple[int,int],...]] = []
+        cases_candidates:list[list[tuple[int,int],...]] = []
         for ligne in self.partie.plateau:
             for piece in ligne:
-                if piece is not None:
-                    pieces_candidates.append(piece)
-                    cases_candidates.append(tuple(piece.cases_atteignables()))
-                    poids.append(len(cases_candidates))
+                if piece is not None and piece.couleur == (self.partie.tour%2):
+                    if (cases_atteignables_piece:=piece.cases_atteignables()):
+                        pieces_candidates.append(piece)
+                        cases_candidates.append(cases_atteignables_piece)
+                        poids.append(len(cases_candidates))
         # On est sûr de choisir au moins un coupn, sinon la partie serait arrêtée
         indice_piece = choices(range(len(pieces_candidates)), poids)[0]
         piece_choisie = pieces_candidates[indice_piece]

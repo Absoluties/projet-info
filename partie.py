@@ -227,17 +227,17 @@ class Partie:
         plateau_str += "    a   b   c   d   e   f   g   h\n"
         print(plateau_str)
 
-    def ajouter_historique(self, coup: tuple[tuple, tuple]) -> None:
-        piece: Piece = self.plateau[coup[0][0]][coup[0][1]]
-        if self.plateau[coup[1][0]][coup[1][1]]:
-            separateur = "x"
+    def ajouter_historique(self, depart:tuple[int,int], arrivee:tuple[int,int], piece_depart:Piece, capture:bool, roque:bool, ep:bool) -> None:
+        self.historique.append((depart, arrivee))
+        if roque:
+            self.historique_str.append('O' + '-O'*(2-(arrivee[1] > depart[1])))
         else:
-            separateur = "-"
-        notations_cases: list[str] = [chr(case[1] + ord("a")) + str(case[0] + 1) for case in coup]
-        self.historique.append(coup)
-        self.historique_str.append(
-            f"{piece.type}{notations_cases[0]}{separateur}{notations_cases[1]}"
-        )
+            separateur = 'x' if capture else '-'
+            mod = '+' * self.rois[self.tour%2].attaquee() + 'e.p' * ep
+            notations_cases: list[str] = [chr(case[1] + ord("a")) + str(case[0] + 1) for case in (depart, arrivee)]
+            self.historique_str.append(
+                f"{piece_depart.type}{notations_cases[0]}{separateur}{notations_cases[1]}{mod}"
+            )
         # print(f"Coup joué {self.historique_str[-1]}")
 
     def est_roque(self, piece: Piece, depart: tuple, arrivee: tuple) -> bool:
@@ -254,10 +254,9 @@ class Partie:
         )
 
     def jouer_coup(self, coup: tuple[tuple[int, int], tuple[int, int]]) -> None:
-        self.ajouter_historique(coup)
         depart, arrivee = coup
-
         piece_depart: Piece | None = self.plateau[depart[0]][depart[1]]
+        piece_arrivee: Piece | None = self.plateau[arrivee[0]][arrivee[1]]
 
         if piece_depart is None:
             return
@@ -272,10 +271,12 @@ class Partie:
         if arrivee in ((0, 0), (0, 7), (7, 0), (7, 7)):
             self.roques_possibles[(piece_depart.couleur + 1) % 2][arrivee[1] // 7] = False
 
-        if self.est_en_passant(piece_depart, depart, arrivee):
+        ep = self.est_en_passant(piece_depart, depart, arrivee)
+        if ep:
             self.plateau[arrivee[0] - (-1) ** piece_depart.couleur][arrivee[1]] = None
 
-        if self.est_roque(piece_depart, depart, arrivee):
+        roque = self.est_roque(piece_depart, depart, arrivee)
+        if roque:
             y1 = 7 * (1 + (arrivee[1] - depart[1]) // 2) // 2
             y2 = depart[1] + (arrivee[1] - depart[1]) // 2
             self.plateau[depart[0]][y1], self.plateau[depart[0]][y2] = (
@@ -287,6 +288,7 @@ class Partie:
         self.plateau[depart[0]][depart[1]] = None
 
         self.tour += 1
+        self.ajouter_historique(depart, arrivee, piece_depart, ep or piece_arrivee is not None, roque, ep)
 
     def jouer_partie_cmd(self, mode="cmd"):
         self.print_plateau()
