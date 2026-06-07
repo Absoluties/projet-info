@@ -376,7 +376,7 @@ class Echiquier(QWidget):
             colonne_cliquee = x // self.taille_case
             ligne_cliquee = 7 - y // self.taille_case  # Inversion axe y : rangée 1 en bas
 
-            # --- Choix de la pièce de promotion ---
+            # Choix de la pièce de promotion
             if self.en_promotion and self.ligne_promotion is not None:
                 couleur:int = (self.partie.tour+1)%2
                 lignes_promotion = [self.ligne_promotion + i for i in range(4)] if couleur else [self.ligne_promotion - i for i in range(4)]
@@ -401,7 +401,7 @@ class Echiquier(QWidget):
                 self.update()
                 return
 
-            # --- Déplacement d'une pièce déjà sélectionnée ---
+            # Déplacement d'une pièce déjà sélectionnée
             if self.case_selectionnee is not None:
                 ligne_selectionnee, colonne_selectionnee = self.case_selectionnee
                 piece_selectionnee: Piece | None = self.partie.plateau[ligne_selectionnee][colonne_selectionnee]
@@ -437,7 +437,7 @@ class Echiquier(QWidget):
                         self._planifier_coup_ia()
                         return
 
-            # --- Sélection d'une pièce appartenant au joueur actuel ---
+            # Sélection d'une pièce appartenant au joueur actuel
             piece = self.partie.plateau[ligne_cliquee][colonne_cliquee]
             if piece is not None and piece.couleur == self.partie.tour % 2:
                 self.case_selectionnee = (ligne_cliquee, colonne_cliquee)
