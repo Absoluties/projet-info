@@ -169,7 +169,7 @@ class Partie:
 
         return coup_machine, type_piece
 
-    def verifier_victoire(self) -> bool | None:
+    def verifier_victoire(self) -> bool:
         """Retourne True si le joueur actuel est en échec et mat, False sinon."""
         roi: Roi = self.rois[self.tour % 2]
         if roi.attaquee():
