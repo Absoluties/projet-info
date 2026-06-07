@@ -35,8 +35,9 @@ class Pion(Piece):
             depart, arrivee = self.partie.historique[-1]
             x1, y1 = depart
             x2, y2 = arrivee
-            piece_sur_case:Piece|None = self.partie.plateau[x2][y2]
-            if (piece_sur_case is not None and piece_sur_case.type == 'P' and piece_sur_case.couleur != self.couleur and abs(x2 - x1) == 2 and x2 == i and abs(y2 - j) == 1):
-                L.append((i + direction, y2))
+            if abs(x2 - x1) == 2 and x2 == i and abs(y2 - j) == 1:
+                piece_sur_case:Piece|None = self.partie.plateau[x2][y2]
+                if piece_sur_case is not None and piece_sur_case.type == 'P' and piece_sur_case.couleur != self.couleur:
+                    L.append((i + direction, y2))
 
         return self.filtrer_coups_forces_clouage(L)

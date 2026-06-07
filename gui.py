@@ -237,9 +237,12 @@ class Echiquier(QWidget):
 
             piece_cible = self.partie.plateau[ligne_cible][colonne_cible]
             if piece_cible is None:
-                couleur = QColor(0, 0, 255, 100)    # Déplacement libre
+                if piece.type == 'P' and colonne_cible != colonne: # Le pion mange s'il se déplace en diagonale
+                    couleur = QColor(255, 0, 0, 100)
+                else:
+                    couleur = QColor(0, 0, 255, 100)  # Bleu pour les cases vides
             else:
-                couleur = QColor(255, 0, 0, 100)    # Capture possible
+                couleur = QColor(255, 0, 0, 100)    # Rouge pour les cases occupées
 
             peintre.fillRect(x, y, self.taille_case, self.taille_case, couleur)
 

@@ -6,8 +6,6 @@ from cavalier import Cavalier
 from tour import Tour
 from fou import Fou
 from piece import Piece
-from ia import IA
-from ia_random import IARandom
 import json
 
 
@@ -238,11 +236,11 @@ class Partie:
         piece_depart.position = arrivee
 
         # Mise à jour des droits de roque dès qu'une tour ou un roi bouge
-        if piece_depart.type == "T":
-            self.roques_possibles[piece_depart.couleur][piece_depart.position[1] // 7] = False
+        if piece_depart.type == "T" and depart in ((0, 0), (0, 7), (7, 0), (7, 7)):
+            self.roques_possibles[piece_depart.couleur][depart[1] // 7] = False
         elif piece_depart.type == "R":
             self.roques_possibles[piece_depart.couleur] = [False, False]
-        # Capturer la tour adverse sur sa case de départ révoque aussi son droit de roque
+        # Capturer la tour adverse sur sa case de départ révoque aussi le droit de roque
         if arrivee in ((0, 0), (0, 7), (7, 0), (7, 7)):
             self.roques_possibles[(piece_depart.couleur + 1) % 2][arrivee[1] // 7] = False
 
