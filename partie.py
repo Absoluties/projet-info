@@ -169,18 +169,17 @@ class Partie:
 
         return coup_machine, type_piece
 
-    def verifier_victoire(self) -> bool:
-        """Retourne True si le joueur actuel est en échec et mat, False sinon."""
+    def verifier_fin(self) -> int:
+        """Retourne -1 si la partie est en cours, 0 en cas d'égalite et 1 en cas de défaite du joueur actuel."""
         roi: Roi = self.rois[self.tour % 2]
+        for ligne in self.plateau:
+            for piece in ligne:
+                if not piece is None and piece.couleur == roi.couleur:
+                    if len(piece.cases_atteignables()):
+                        return -1
         if roi.attaquee():
-            print("Roi en echec")
-            for ligne in self.plateau:
-                for piece in ligne:
-                    if not piece is None and piece.couleur == roi.couleur:
-                        if len(piece.cases_atteignables()):
-                            return False
-            return True
-        return False
+            return 1
+        return 0
 
     def print_plateau(self) -> None:
         """Affiche le plateau dans le terminal avec les coordonnées algébriques."""
@@ -270,7 +269,8 @@ class Partie:
     def jouer_partie_cmd(self, mode="cmd") -> None:
         """Lance une partie en ligne de commande (méthode de débogage utilisée avant que l'interface graphique soit implémentée)."""
         self.print_plateau()
-        while not self.verifier_victoire():
+        fin = -1
+        while fin == -1:
             while True:
                 coup, type_piece = self.choisir_coup_cmd()
                 if self.verifier_validite_coup(coup, type_piece):
@@ -278,7 +278,11 @@ class Partie:
                 print("Coup illicite, recommencez.")
             self.jouer_coup(coup)
             self.print_plateau()
-        print(f"Le joueur {('Blanc','Noir')[(self.tour-1)%2]} a gagné")
+            fin = self.verifier_fin()
+        if fin:
+            print(f"Le joueur {('Blanc','Noir')[(self.tour-1)%2]} a gagné")
+        else:
+            print('Égalité')
 
     def sauvegarder(self, chemin: str, promotions: list[str | None]) -> None:
         """Sauvegarde l'historique des coups et les promotions dans un fichier JSON."""

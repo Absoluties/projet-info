@@ -289,24 +289,15 @@ class Echiquier(QWidget):
     def _verifier_fin(self) -> bool:
         """Vérifie mat et pat. Pose message_fin et arrête le jeu si terminé. Retourne True si fin."""
         partie = self.partie
-        roi = partie.rois[partie.tour % 2]
-        couleur_joueur = ('Blancs', 'Noirs')[partie.tour % 2]
-        couleur_gagnant = ('Noirs', 'Blancs')[partie.tour % 2]
-
-        aucun_coup = all(
-            not piece.cases_atteignables()
-            for ligne in partie.plateau
-            for piece in ligne
-            if piece is not None and piece.couleur == partie.tour % 2
-        )
-        if not aucun_coup:
-            return False
-
-        if roi.attaquee():
-            self.message_fin = f"Échec et mat !\n{couleur_gagnant} gagnent."
-        else:
-            self.message_fin = "Pat !\nPartie nulle."
-
+        match partie.verifier_fin():
+            case -1:
+                return False
+            case 0:
+                self.message_fin = "Pat !\nPartie nulle."
+            case 1:
+                self.message_fin = f"Échec et mat !\n{('Noirs', 'Blancs')[partie.tour % 2]} gagnent."
+            case _:
+                RuntimeError()
         self.en_jeu = False
         self.tour_ia_en_cours = False
         self.update()
