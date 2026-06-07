@@ -7,13 +7,14 @@ if TYPE_CHECKING:
 class Piece(ABC):
     def __init__(self, x:int, y:int, couleur:int, partie:'Partie'):
         self.position = (x, y)
-        self.couleur = couleur
+        self.couleur = couleur  # 0 = Blanc, 1 = Noir
         self.partie = partie
         self.coups_possibles = []
         self.representation = ''
         self.type = ''
 
-    def test_menace_pion_cavalier(self, position:tuple[int,int], type_piece:str):
+    def test_menace_pion_cavalier(self, position:tuple[int,int], type_piece:str) -> bool:
+        """Vérifie si la case donnée contient un ennemi du type spécifié."""
         x,y = position
         if 0 <= x < 8 and 0 <= y < 8:
             piece:Piece|None = self.partie.plateau[x][y]
@@ -22,7 +23,8 @@ class Piece(ABC):
                     return True
         return False
 
-    def test_menace_dame_fou_tour_roi(self, direction:tuple[int,int], types_pieces:tuple[str,...], max_distance:int=7):
+    def test_menace_dame_fou_tour_roi(self, direction:tuple[int,int], types_pieces:tuple[str,...], max_distance:int=7) -> bool:
+        """Parcourt la direction donnée et retourne True si une pièce ennemie des types indiqués est rencontrée."""
         x,y = self.position
         distance = 1
         while distance <= max_distance and 0 <= (x:=x+direction[0]) < 8 and 0 <= (y:=y+direction[1]) < 8:
@@ -31,11 +33,13 @@ class Piece(ABC):
             if not piece is None:
                 if piece.type in types_pieces:
                     return piece.couleur != self.couleur
-                return False
+                return False  # Pièce d'un autre type : ligne de vue bloquée
         return False
 
     def attaquee(self) -> bool:
+        """Retourne True si cette pièce est attaquée par au moins une pièce adverse."""
         positions_menaces_cavalier = [(self.position[0]+i,self.position[1]+j) for i,j in ((-1,2), (1,2), (-1,-2), (1,-2), (2,-1), (2,1), (-2,-1), (-2,1))]
+        # (-1)**couleur vaut 1 (blancs) ou -1 (noirs) : sens depuis lequel un pion ennemi peut attaquer
         positions_menaces_pion = [(self.position[0] + (-1) ** self.couleur,self.position[1] + i) for i in (1,-1)]
 
         for position in positions_menaces_cavalier:
@@ -63,10 +67,10 @@ class Piece(ABC):
         return False
 
     def filtrer_coups_forces_clouage(self, coups:list) -> list:
-        '''
-        Ici on vérifie si les coups générés précedemment génèrent des échecs, auquel cas il faut les ignorer.
-        Ainsi on simule les coups et on utilise la méthode attaquee() des rois.
-        '''
+        """Filtre les coups qui laisseraient le roi allié en échec (clouage ou mise en échec directe).
+
+        Simule chaque coup temporairement sur le plateau sans passer par jouer_coup.
+        """
         coups_filtres = []
         x1, y1 = self.position
 
@@ -93,8 +97,5 @@ class Piece(ABC):
 
     @abstractmethod
     def cases_atteignables(self) -> list[tuple[int,int]]:
-        """Détermine les cases qu'une pièce peut atteindre
-        pour ensuite ne permettre de jouer que les coups légaux.
-
-        Renvoie une liste de couples correspondants aux coordonnées des cases atteignables"""
+        """Retourne la liste des cases légalement atteignables par cette pièce."""
         pass

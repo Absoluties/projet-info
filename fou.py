@@ -9,11 +9,12 @@ class Fou(Piece):
         self.representation = "♝" if couleur else "♗"  # 0: Blanc ; 1: Noir
         self.type = 'F'
 
-    def cases_atteignables(self):
+    def cases_atteignables(self) -> list[tuple[int,int]]:
+        """Retourne les cases atteignables par le fou (diagonales, jusqu'à obstacle ou bord)."""
         L = []
         x, y = self.position
         directions = [
-            (1, 1), (1, -1), (-1, 1), (-1, -1)  # fou
+            (1, 1), (1, -1), (-1, 1), (-1, -1)
         ]
         for dx, dy in directions:
             k = 1

@@ -8,7 +8,6 @@ from fou import Fou
 from piece import Piece
 from ia import IA
 from ia_random import IARandom
-from ia_ft import IA_fort
 import json
 
 
@@ -16,7 +15,7 @@ class Partie:
     def __init__(self):
         self.rois = {0: Roi(0, 4, 0, self), 1: Roi(7, 4, 1, self)}
 
-        self.roques_possibles = {0: [True, True], 1: [True, True]}  # grand, petit roque
+        self.roques_possibles = {0: [True, True], 1: [True, True]}  # [grand roque, petit roque]
 
         self.plateau: list[list[Piece | None]] = [
             [
@@ -68,13 +67,8 @@ class Partie:
         self.historique_str: list[str] = []
         self.tour: int = 0
 
-    def completer_coup_notation_abregee(
-        self, position_arrivee: tuple[int, int], type_piece: str
-    ) -> tuple[tuple[int, int], tuple[int, int]]:
-        """
-        Il n'y a pas de manière simple de déterminer quelle est la seule pièce qui peut effectuer un certain coup, donc on vérifie toute les cases jusqu'à la trouver.
-        On pourrait accélérer la fonction en cherchant depuis les cases de départs possibles selon le type de pièce mais on a pas besoin du gain de performance.
-        """
+    def completer_coup_notation_abregee(self, position_arrivee: tuple[int, int], type_piece: str) -> tuple[tuple[int, int], tuple[int, int]]:
+        """Trouve la pièce du type donné pouvant atteindre position_arrivee et retourne le coup complet."""
         for i in range(8):
             for j in range(8):
                 piece_sur_case: Piece | None = self.plateau[i][j]
@@ -84,30 +78,30 @@ class Partie:
                         and position_arrivee in piece_sur_case.cases_atteignables()
                     ):
                         return ((i, j), position_arrivee)
-        return (
-            (0, 0),
-            (0, 0),
-        )  # Ce coup est toujours impossible (une pièce ne peut pas se déplacer sur elle-même)
+        # (0,0)→(0,0) est toujours un coup invalide : une pièce ne peut pas se déplacer sur elle-même
+        return ((0, 0), (0, 0))
 
     def est_case(self, case: str) -> bool:
+        """Retourne True si la chaîne représente une case valide en notation algébrique (ex: 'e4')."""
         if len(case) == 2:
             return (ord("a") <= ord(case[0]) <= ord("h")) and (ord("1") <= ord(case[1]) <= ord("8"))
         return False
 
     def verifier_syntaxe_coup(self, notation: str) -> bool:
+        """Retourne True si la chaîne de notation de coup est syntaxiquement valide."""
         initiales_pieces = ("p", "t", "c", "f", "d", "r")
 
         if not notation.isalnum():
             return False
 
         match len(notation):
-            case 2:  # Coup de pion implicite
+            case 2:  # Coup de pion implicite (ex: e4)
                 return self.est_case(notation)
-            case 3:  # Coup de pièce quelconque implicite
+            case 3:  # Coup de pièce implicite (ex: Ce4)
                 return (notation[0] in initiales_pieces) and self.est_case(notation[1:3])
-            case 4:  # Coup de pion explicite
+            case 4:  # Coup de pion explicite (ex: e2e4)
                 return self.est_case(notation[0:2]) and self.est_case(notation[2:4])
-            case 5:  # Coup de pièce quelconque explicite
+            case 5:  # Coup de pièce explicite (ex: Cc3e4)
                 return (
                     (notation[0] in initiales_pieces)
                     and self.est_case(notation[1:3])
@@ -116,9 +110,8 @@ class Partie:
             case _:
                 return False
 
-    def verifier_validite_coup(
-        self, coup: tuple[tuple[int, int], tuple[int, int]], type_piece: str
-    ) -> bool:
+    def verifier_validite_coup(self, coup: tuple[tuple[int, int], tuple[int, int]], type_piece: str) -> bool:
+        """Retourne True si le coup est légal pour une pièce du type donné appartenant au joueur actuel."""
         piece_sur_case: Piece | None = self.plateau[coup[0][0]][coup[0][1]]
         if (
             piece_sur_case is not None
@@ -129,25 +122,16 @@ class Partie:
             return True
         return False
 
-    def choisir_coup_cmd(self):
-        """
-        Chaque camp est composé de seize pièces, notées ainsi dans la notation française :
-            un roi, noté R
-            une dame, notée D
-            deux tours, notées T
-            deux fous, notés F
-            deux cavaliers, notés C
-            huit pions, notés P en notation complète et non notés en notation abrégée.
-        Au début de la partie, les pièces sont disposées sur l'échiquier comme indiqué sur le diagramme plus haut. Au centre, le roi et la dame (la dame sur la case de sa couleur sur la colonne d), puis de part et d'autre, les deux fous, les deux cavaliers puis les deux tours. Les 8 pions occupent la rangée située immédiatement devant ces pièces.
-        La notation des pièces ci-dessus ne prend en compte que le type des pièces : par exemple, F désigne un fou blanc ou noir, on identifie chaque pièce individuellement sur l'échiquier en indiquant la case sur laquelle elle se trouve.
-        Il n'est pas nécessaire normalement de noter le pion (il suffit d'indiquer sa case), mais quand on le fait, on utilise la lettre P en français.
-        """
+    def choisir_coup_cmd(self) -> tuple[tuple[tuple[int,int], tuple[int,int]], str]:
+        """Lit un coup en notation française depuis le terminal et retourne (coup, type_pièce).
 
+        Notation acceptée (française, minuscules) :
+          P/p pion, T/t tour, C/c cavalier, F/f fou, D/d dame, R/r roi.
+          Formes : 'e4', 'Ce4', 'e2-e4', 'Ce2xf4' (le tiret et 'x' sont ignorés).
+        """
         while True:
             coup_notation = (
-                input(
-                    f'Tour des [{"NOIRS" if self.tour%2 else "BLANCS"}], choissisez un coup (notation standard) : '
-                )
+                input(f'Tour des [{"NOIRS" if self.tour%2 else "BLANCS"}], choissisez un coup (notation standard) : ')
                 .strip()
                 .lower()
                 .replace("-", "")
@@ -157,36 +141,24 @@ class Partie:
                 break
             print("Syntaxe du coup invalide, utilisez la notation française standard.")
 
-        # Il faut faire attention pour les pions à ne pas confondre la lettre de la case pour le type de pièce
+        # Les coups de pion (2 ou 4 caractères) n'ont pas de lettre de pièce : on la préfixe
         if len(coup_notation) in (2, 4):
             coup_notation = "p" + coup_notation
 
         match coup_notation[0]:
-            case "p":
-                type_piece = "P"
-                coup_notation = coup_notation[1:]
-            case "r":
-                type_piece = "R"
-                coup_notation = coup_notation[1:]
-            case "d":
-                type_piece = "D"
-                coup_notation = coup_notation[1:]
-            case "t":
-                type_piece = "T"
-                coup_notation = coup_notation[1:]
-            case "f":
-                type_piece = "F"
-                coup_notation = coup_notation[1:]
-            case "c":
-                type_piece = "C"
-                coup_notation = coup_notation[1:]
-            case _:
-                raise RuntimeError()
+            case "p": type_piece = "P"
+            case "r": type_piece = "R"
+            case "d": type_piece = "D"
+            case "t": type_piece = "T"
+            case "f": type_piece = "F"
+            case "c": type_piece = "C"
+            case _: raise RuntimeError()
 
+        coup_notation = coup_notation[1:]
         coup_machine_str = coup_notation[:2], coup_notation[2:]
 
-        # On donne seulement la position d'arrivée : il faut déterminer la piece jouée
         if not coup_machine_str[1]:
+            # Notation abrégée : seule la case d'arrivée est fournie
             position = (int(coup_machine_str[0][1]) - 1, ord(coup_machine_str[0][0]) - ord("a"))
             coup_machine = self.completer_coup_notation_abregee(position, type_piece)
         else:
@@ -197,10 +169,8 @@ class Partie:
 
         return coup_machine, type_piece
 
-    def verifier_victoire(self):
-        """
-        Pour vérifier la fin de la partie, il faut essayer tout les coups potentiels du joueur en échec.
-        """
+    def verifier_victoire(self) -> bool | None:
+        """Retourne True si le joueur actuel est en échec et mat, False sinon."""
         roi: Roi = self.rois[self.tour % 2]
         if roi.attaquee():
             print("Roi en echec")
@@ -210,8 +180,10 @@ class Partie:
                         if len(piece.cases_atteignables()):
                             return False
             return True
+        return False
 
-    def print_plateau(self):
+    def print_plateau(self) -> None:
+        """Affiche le plateau dans le terminal avec les coordonnées algébriques."""
         plateau_str = "\n"
         plateau_str += "    a   b   c   d   e   f   g   h\n"
         plateau_str += "  ┌───┬───┬───┬───┬───┬───┬───┬───┐\n"
@@ -229,6 +201,7 @@ class Partie:
         print(plateau_str)
 
     def ajouter_historique(self, coup: tuple[tuple, tuple]) -> None:
+        """Enregistre le coup dans l'historique (coordonnées brutes et notation algébrique)."""
         piece: Piece = self.plateau[coup[0][0]][coup[0][1]]
         if self.plateau[coup[1][0]][coup[1][1]]:
             separateur = "x"
@@ -239,14 +212,13 @@ class Partie:
         self.historique_str.append(
             f"{piece.type}{notations_cases[0]}{separateur}{notations_cases[1]}"
         )
-        # print(f"Coup joué {self.historique_str[-1]}")
 
     def est_roque(self, piece: Piece, depart: tuple, arrivee: tuple) -> bool:
-        # Roi se déplaçant de deux cases
+        """Retourne True si le coup est un roque (roi se déplaçant de deux cases)."""
         return piece is not None and piece.type == "R" and abs(arrivee[1] - depart[1]) == 2
 
     def est_en_passant(self, piece: Piece, depart: tuple, arrivee: tuple) -> bool:
-        # Pion se déplaçant en diagonale vers une case vide = en passant
+        """Retourne True si le coup est une prise en passant (pion en diagonale vers case vide)."""
         return (
             piece is not None
             and piece.type == "P"
@@ -255,6 +227,7 @@ class Partie:
         )
 
     def jouer_coup(self, coup: tuple[tuple[int, int], tuple[int, int]]) -> None:
+        """Applique le coup sur le plateau en gérant le roque et la prise en passant."""
         self.ajouter_historique(coup)
         depart, arrivee = coup
 
@@ -265,20 +238,22 @@ class Partie:
 
         piece_depart.position = arrivee
 
-        # Garder la trace des coups désactivant les roques évitent des vérifications de l'historique
+        # Mise à jour des droits de roque dès qu'une tour ou un roi bouge
         if piece_depart.type == "T":
             self.roques_possibles[piece_depart.couleur][piece_depart.position[1] // 7] = False
         elif piece_depart.type == "R":
             self.roques_possibles[piece_depart.couleur] = [False, False]
+        # Capturer la tour adverse sur sa case de départ révoque aussi son droit de roque
         if arrivee in ((0, 0), (0, 7), (7, 0), (7, 7)):
             self.roques_possibles[(piece_depart.couleur + 1) % 2][arrivee[1] // 7] = False
 
         if self.est_en_passant(piece_depart, depart, arrivee):
+            # Suppression du pion capturé en passant (il est sur la même rangée que le pion preneur)
             self.plateau[arrivee[0] - (-1) ** piece_depart.couleur][arrivee[1]] = None
 
         if self.est_roque(piece_depart, depart, arrivee):
-            y1 = 7 * (1 + (arrivee[1] - depart[1]) // 2) // 2
-            y2 = depart[1] + (arrivee[1] - depart[1]) // 2
+            y1 = 7 * (1 + (arrivee[1] - depart[1]) // 2) // 2 # colonne d'origine de la tour (0 ou 7)
+            y2 = depart[1] + (arrivee[1] - depart[1]) // 2 # colonne d'arrivée de la tour
             self.plateau[depart[0]][y1], self.plateau[depart[0]][y2] = (
                 self.plateau[depart[0]][y2],
                 self.plateau[depart[0]][y1],
@@ -289,16 +264,10 @@ class Partie:
 
         self.tour += 1
 
-    def jouer_partie_cmd(self, mode="cmd"):
+    def jouer_partie_cmd(self, mode="cmd") -> None:
+        """Lance une partie en ligne de commande (méthode de débogage utilisée avant que l'interface graphique soit implémentée)."""
         self.print_plateau()
-        ia = IA_fort(4, self)
         while not self.verifier_victoire():
-            if self.tour % 2 == 1:
-                print("Coup de l'IA")
-                coup = ia.choisir_coup()
-                self.jouer_coup(coup)
-                self.print_plateau()
-                continue
             while True:
                 coup, type_piece = self.choisir_coup_cmd()
                 if self.verifier_validite_coup(coup, type_piece):
@@ -309,7 +278,7 @@ class Partie:
         print(f"Le joueur {('Blanc','Noir')[(self.tour-1)%2]} a gagné")
 
     def sauvegarder(self, chemin: str, promotions: list[str | None]) -> None:
-        """Sauvegarde la partie (historique + promotions) dans un fichier JSON."""
+        """Sauvegarde l'historique des coups et les promotions dans un fichier JSON."""
         data = {
             "historique": [
                 [[coup[0][0], coup[0][1]], [coup[1][0], coup[1][1]]] for coup in self.historique
@@ -320,8 +289,7 @@ class Partie:
             json.dump(data, f, indent=2)
 
     def charger(chemin: str) -> tuple["Partie", list[str | None]]:
-        """Charge une partie depuis un fichier JSON.
-        Retourne (nouvelle_partie_rejoueé, liste_promotions)."""
+        """Charge et rejoue une partie depuis un fichier JSON. Retourne (partie, liste_promotions)."""
         TYPE_VERS_CLASSE = {"D": Dame, "T": Tour, "F": Fou, "C": Cavalier}
 
         with open(chemin, "r", encoding="utf-8") as f:
@@ -333,7 +301,6 @@ class Partie:
         for i, coup_data in enumerate(data["historique"]):
             coup = (tuple(coup_data[0]), tuple(coup_data[1]))
             partie.jouer_coup(coup)
-            # Appliquer la promotion si nécessaire
             type_promo = promotions[i] if i < len(promotions) else None
             if type_promo is not None and type_promo in TYPE_VERS_CLASSE:
                 arrivee = coup[1]

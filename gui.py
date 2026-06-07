@@ -30,9 +30,10 @@ from ia_random import IARandom
 import random
 
 class HistoriqueCoups(QPlainTextEdit):
-    LIGNE_REFERENCE = "99. Da1xh8+++ Da8xh1+++"
+    LIGNE_REFERENCE = "99. Da1xh8+++ Da8xh1+++"  # Ligne la plus large possible, pour calibrer la police
 
     def __init__(self, partie: Partie, echelle_police: float):
+        """Initialise le widget d'historique en lecture seule et affiche les coups existants."""
         super().__init__()
         self.partie = partie
         self.setReadOnly(True)
@@ -45,7 +46,8 @@ class HistoriqueCoups(QPlainTextEdit):
         self._appliquer_style(8)
         self.mettre_a_jour_coups()
 
-    def _appliquer_style(self, taille_pt: int):
+    def _appliquer_style(self, taille_pt: int) -> None:
+        """Applique la feuille de style avec la taille de police donnée, sans recréer si inchangée."""
         if taille_pt == self._taille_police_courante:
             return
         self._taille_police_courante = taille_pt
@@ -60,7 +62,8 @@ class HistoriqueCoups(QPlainTextEdit):
             }}
         """)
 
-    def _ajuster_police(self):
+    def _ajuster_police(self) -> None:
+        """Réduit la taille de police jusqu'à ce que la ligne de référence tienne dans la largeur disponible."""
         largeur_dispo = self.viewport().width() - 4
         if largeur_dispo <= 0:
             return
@@ -70,11 +73,13 @@ class HistoriqueCoups(QPlainTextEdit):
                 self._appliquer_style(taille)
                 return
 
-    def resizeEvent(self, event):
+    def resizeEvent(self, event) -> None:
+        """Réajuste la taille de police à chaque redimensionnement."""
         super().resizeEvent(event)
         self._ajuster_police()
 
-    def mettre_a_jour_coups(self):
+    def mettre_a_jour_coups(self) -> None:
+        """Recharge et affiche l'intégralité de l'historique, puis fait défiler jusqu'au dernier coup."""
         texte = ""
         coups = self.partie.historique_str
 
@@ -95,6 +100,7 @@ class HistoriqueCoups(QPlainTextEdit):
 
 class Echiquier(QWidget):
     def __init__(self, partie: Partie, historique_coups: HistoriqueCoups, echelle_police:float):
+        """Initialise le widget échiquier avec les références à la partie et à l'historique."""
         super().__init__()
         self.partie = partie
         self.taille_case = 60
@@ -114,27 +120,31 @@ class Echiquier(QWidget):
         self.promotions: list[str | None] = []  # type promu par coup, None si pas de promotion
         self.init_ui()
 
-    def init_ui(self):
+    def init_ui(self) -> None:
+        """Configure la politique de redimensionnement du widget."""
         self.setWindowTitle('Jeu d\'échecs')
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
     def sizeHint(self) -> QSize:
+        """Retourne la taille préférée du widget (plateau + marges des étiquettes)."""
         taille_plateau = 8 * self.taille_case
         taille_totale = taille_plateau + 2 * self.taille_etiquette
         return QSize(taille_totale, taille_totale)
 
-    def resizeEvent(self, event):
+    def resizeEvent(self, event) -> None:
+        """Recalcule la taille des cases et des étiquettes en fonction du widget."""
         super().resizeEvent(event)
         cote = min(self.width(), self.height())
         self.taille_case = max(20, cote // 9)
         self.taille_etiquette = max(10, self.taille_case // 2)
         self.update()
 
-    def paintEvent(self, a0):
+    def paintEvent(self, a0) -> None:
+        """Dessine le plateau complet : cases, étiquettes, pièces, surbrillances et overlays."""
         peintre = QPainter(self)
         peintre.setRenderHint(QPainter.Antialiasing)
 
-        # Dessiner les cases de l'échiquier
+        # Cases de l'échiquier
         for ligne in range(8):
             for colonne in range(8):
                 ligne_affichee = 7 - ligne
@@ -147,56 +157,40 @@ class Echiquier(QWidget):
                     couleur = QColor(189, 172, 135)  # Case foncée
 
                 peintre.fillRect(x, y, self.taille_case, self.taille_case, couleur)
-
-                # Dessiner la bordure
                 peintre.drawRect(x, y, self.taille_case, self.taille_case)
 
-        # Dessiner les étiquettes des colonnes
+        # Étiquettes des colonnes (a–h)
         taille_police = int(self.taille_case * 0.1 * self.echelle_police)
         police = QFont("Arial", taille_police)
         peintre.setFont(police)
         peintre.setPen(QColor(0, 0, 0))
         for colonne in range(8):
             x = self.taille_etiquette + colonne * self.taille_case
-            # Étiquettes du haut
             peintre.drawText(
-                x,
-                0,
-                self.taille_case,
-                self.taille_etiquette,
+                x, 0, self.taille_case, self.taille_etiquette,
                 Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter,
                 chr(ord("a") + colonne),
             )
-            # Étiquettes du bas
             peintre.drawText(
-                x,
-                self.taille_etiquette + 8 * self.taille_case,
-                self.taille_case,
-                self.taille_etiquette,
+                x, self.taille_etiquette + 8 * self.taille_case,
+                self.taille_case, self.taille_etiquette,
                 Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter,
                 chr(ord("a") + colonne),
             )
 
-        # Dessiner les étiquettes des rangées
+        # Étiquettes des rangées (1–8)
         for ligne in range(8):
             ligne_affichee = 7 - ligne
             y = self.taille_etiquette + ligne_affichee * self.taille_case
             rang = str(ligne + 1)
-            # Étiquettes de gauche
             peintre.drawText(
-                0,
-                y,
-                self.taille_etiquette,
-                self.taille_case,
+                0, y, self.taille_etiquette, self.taille_case,
                 Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter,
                 rang,
             )
-            # Étiquettes de droite
             peintre.drawText(
-                self.taille_etiquette + 8 * self.taille_case,
-                y,
-                self.taille_etiquette,
-                self.taille_case,
+                self.taille_etiquette + 8 * self.taille_case, y,
+                self.taille_etiquette, self.taille_case,
                 Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter,
                 rang,
             )
@@ -206,7 +200,8 @@ class Echiquier(QWidget):
         self.dessiner_promotion(peintre)
         self._dessiner_overlay_fin(peintre)
 
-    def dessiner_pieces(self, peintre: QPainter):
+    def dessiner_pieces(self, peintre: QPainter) -> None:
+        """Dessine chaque pièce du plateau via son fichier SVG (svgs/<type><couleur>.svg)."""
         padding = int(self.taille_case * 0.05)
         taille = self.taille_case - 2 * padding
 
@@ -223,12 +218,13 @@ class Echiquier(QWidget):
                 chemin_svg = f'svgs/{piece.type.lower()}{piece.couleur}.svg'
 
                 if not os.path.isfile(chemin_svg):
-                    continue  # skip if SVG not found
+                    continue  # SVG manquant : pièce ignorée silencieusement
 
                 renderer = QSvgRenderer(chemin_svg)
                 renderer.render(peintre, QRectF(x, y, taille, taille))
 
-    def dessiner_surbrillances(self, peintre: QPainter):
+    def dessiner_surbrillances(self, peintre: QPainter) -> None:
+        """Surligne en bleu les cases vides et en rouge les cases occupées atteignables par la pièce sélectionnée."""
         if self.case_selectionnee is None:
             return
 
@@ -245,29 +241,28 @@ class Echiquier(QWidget):
 
             piece_cible = self.partie.plateau[ligne_cible][colonne_cible]
             if piece_cible is None:
-                couleur = QColor(0, 0, 255, 100)  # Bleu pour les cases vides
+                couleur = QColor(0, 0, 255, 100)    # Déplacement libre
             else:
-                couleur = QColor(255, 0, 0, 100)  # Rouge pour les cases occupées
+                couleur = QColor(255, 0, 0, 100)    # Capture possible
 
             peintre.fillRect(x, y, self.taille_case, self.taille_case, couleur)
 
-    def dessiner_promotion(self, peintre: QPainter):
+    def dessiner_promotion(self, peintre: QPainter) -> None:
+        """Affiche le menu de promotion (4 pièces) au-dessus ou en-dessous de la case de promotion selon la couleur."""
         if not self.en_promotion or self.ligne_promotion is None:
             return
 
         police = QFont("Arial", int(self.taille_case * 0.47 * self.echelle_police), QFont.Bold)
         peintre.setFont(police)
 
-        # Afficher les 4 pièces de promotion
         for i, classe_piece in enumerate(self.pieces_promotion):
-            # Les pièces s'affichent en remontant ou en descendant selon la couleur
+            # (tour+1)%2 : la couleur du pion qui vient de jouer (tour a déjà été incrémenté)
             couleur:int = (self.partie.tour+1)%2
             if couleur:
-                ligne_affichage = self.ligne_promotion + i
+                ligne_affichage = self.ligne_promotion + i   # Noirs : menu vers le bas
             else:
-                ligne_affichage = self.ligne_promotion - i
+                ligne_affichage = self.ligne_promotion - i   # Blancs : menu vers le haut
 
-            # Vérifier que la ligne est valide
             if not (0 <= ligne_affichage <= 7):
                 continue
 
@@ -275,18 +270,15 @@ class Echiquier(QWidget):
             x = self.taille_etiquette + self.colonne_promotion * self.taille_case
             y = self.taille_etiquette + ligne_affichee_ui * self.taille_case
 
-            # Fond entièrement opaque
-            couleur_fond = QColor(100, 150, 200, 255)
-            peintre.fillRect(x, y, self.taille_case, self.taille_case, couleur_fond)
+            peintre.fillRect(x, y, self.taille_case, self.taille_case, QColor(100, 150, 200, 255))
 
-            # Créer une instance temporaire juste pour la représentation
+            # Instance temporaire uniquement pour récupérer la représentation Unicode
             piece_temp = classe_piece(0, 0, 0, self.partie)
 
-            # Couleur du texte
             if couleur:
-                peintre.setPen(QColor(0, 0, 0))        # Pièces noires
+                peintre.setPen(QColor(0, 0, 0))         # Pièces noires
             else:
-                peintre.setPen(QColor(255, 255, 255))  # Pièces blanches
+                peintre.setPen(QColor(255, 255, 255))   # Pièces blanches
 
             peintre.drawText(
                 x, y, self.taille_case, self.taille_case,
@@ -301,7 +293,6 @@ class Echiquier(QWidget):
         couleur_joueur = ('Blancs', 'Noirs')[partie.tour % 2]
         couleur_gagnant = ('Noirs', 'Blancs')[partie.tour % 2]
 
-        # Aucun coup légal disponible ?
         aucun_coup = all(
             not piece.cases_atteignables()
             for ligne in partie.plateau
@@ -321,15 +312,14 @@ class Echiquier(QWidget):
         self.update()
         return True
 
-    def _dessiner_overlay_fin(self, peintre: QPainter):
+    def _dessiner_overlay_fin(self, peintre: QPainter) -> None:
+        """Affiche un overlay semi-transparent avec le message de fin de partie."""
         if self.message_fin is None:
             return
         taille_plateau = 8 * self.taille_case
         x = self.taille_etiquette
         y = self.taille_etiquette
-        # Fond semi-transparent
         peintre.fillRect(x, y, taille_plateau, taille_plateau, QColor(0, 0, 0, 160))
-        # Texte centré
         taille_police = max(12, self.taille_case * 28 // 60)
         police = QFont("Arial", taille_police, QFont.Bold)
         peintre.setFont(police)
@@ -340,7 +330,8 @@ class Echiquier(QWidget):
             self.message_fin,
         )
 
-    def _planifier_coup_ia(self):
+    def _planifier_coup_ia(self) -> None:
+        """Déclenche le coup de l'IA avec un délai de 100 ms si c'est bien son tour."""
         if self.ia is None:
             return
         if self.partie.tour % 2 != self.couleur_ia:
@@ -348,7 +339,8 @@ class Echiquier(QWidget):
         self.tour_ia_en_cours = True
         QTimer.singleShot(100, self._jouer_coup_ia)
 
-    def _jouer_coup_ia(self):
+    def _jouer_coup_ia(self) -> None:
+        """Fait jouer l'IA, applique le coup, gère la promotion automatique en dame et vérifie la fin."""
         if not self.en_jeu or self.ia is None:
             self.tour_ia_en_cours = False
             return
@@ -361,7 +353,7 @@ class Echiquier(QWidget):
             return
         depart, arrivee = coup
         self.partie.jouer_coup(coup)
-        # Promotion automatique en dame si un pion de l'IA atteint la dernière rangée
+        # Promotion automatique en dame pour l'IA
         piece = self.partie.plateau[arrivee[0]][arrivee[1]]
         type_promo = None
         if isinstance(piece, Pion):
@@ -377,7 +369,8 @@ class Echiquier(QWidget):
             return
         self.update()
 
-    def mousePressEvent(self, a0: QMouseEvent | None):
+    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
+        """Gère les clics : sélection de pièce, déplacement, choix de promotion."""
         if not self.en_jeu or self.tour_ia_en_cours:
             return
         if a0 is None:
@@ -390,22 +383,20 @@ class Echiquier(QWidget):
             self.case_selectionnee = None
         else:
             colonne_cliquee = x // self.taille_case
-            ligne_cliquee = 7 - y // self.taille_case
+            ligne_cliquee = 7 - y // self.taille_case  # Inversion axe y : rangée 1 en bas
 
-            # Gérer la promotion
+            # --- Choix de la pièce de promotion ---
             if self.en_promotion and self.ligne_promotion is not None:
                 couleur:int = (self.partie.tour+1)%2
-                # Calculer les lignes de promotion
                 lignes_promotion = [self.ligne_promotion + i for i in range(4)] if couleur else [self.ligne_promotion - i for i in range(4)]
 
-                # Vérifier si le clic est sur une pièce de promotion
                 for i, ligne_promo in enumerate(lignes_promotion):
                     if 0 <= ligne_promo <= 7 and ligne_cliquee == ligne_promo and colonne_cliquee == self.colonne_promotion:
                         classe_piece = self.pieces_promotion[i]
-                        piece_promue = classe_piece(self.ligne_promotion, self.colonne_promotion, couleur,self.partie)
+                        piece_promue = classe_piece(self.ligne_promotion, self.colonne_promotion, couleur, self.partie)
                         self.partie.plateau[self.ligne_promotion][self.colonne_promotion] = piece_promue
                         if self.promotions:
-                            self.promotions[-1] = piece_promue.type  # remplace le None posé au jouer_coup
+                            self.promotions[-1] = piece_promue.type  # Remplace le None temporaire
                         self.en_promotion = False
                         self.case_selectionnee = None
                         if self.historique_coups:
@@ -416,11 +407,10 @@ class Echiquier(QWidget):
                         self._planifier_coup_ia()
                         return
 
-                # Si le clic n'est pas sur une pièce de promotion, ignorer
                 self.update()
                 return
 
-            # Vérifier si une pièce est déjà sélectionnée
+            # --- Déplacement d'une pièce déjà sélectionnée ---
             if self.case_selectionnee is not None:
                 ligne_selectionnee, colonne_selectionnee = self.case_selectionnee
                 piece_selectionnee: Piece | None = self.partie.plateau[ligne_selectionnee][colonne_selectionnee]
@@ -428,18 +418,17 @@ class Echiquier(QWidget):
                 if piece_selectionnee is not None:
                     cases_atteignables = piece_selectionnee.cases_atteignables()
 
-                    # Si la case cliquée est dans les cases atteignables, jouer le coup
                     if (ligne_cliquee, colonne_cliquee) in cases_atteignables:
                         coup = ((ligne_selectionnee, colonne_selectionnee), (ligne_cliquee, colonne_cliquee))
                         self.partie.jouer_coup(coup)
 
-                        # Vérifier si c'est une promotion
+                        # Vérification de promotion après le coup
                         piece_deplacee = self.partie.plateau[ligne_cliquee][colonne_cliquee]
                         if isinstance(piece_deplacee, Pion):
                             est_blanc = piece_deplacee.couleur == 0
                             ligne_promo = 7 if est_blanc else 0
                             if ligne_cliquee == ligne_promo:
-                                self.promotions.append(None)  # sera mis à jour au choix
+                                self.promotions.append(None)  # Sera mis à jour après le choix
                                 self.en_promotion = True
                                 self.ligne_promotion = ligne_cliquee
                                 self.colonne_promotion = colonne_cliquee
@@ -447,7 +436,7 @@ class Echiquier(QWidget):
                                 self.update()
                                 return
 
-                        self.promotions.append(None)  # coup sans promotion
+                        self.promotions.append(None)
                         if self.historique_coups:
                             self.historique_coups.mettre_a_jour_coups()
                         self.case_selectionnee = None
@@ -457,7 +446,7 @@ class Echiquier(QWidget):
                         self._planifier_coup_ia()
                         return
 
-            # Sélectionner une pièce seulement si elle appartient au joueur actuel
+            # --- Sélection d'une pièce appartenant au joueur actuel ---
             piece = self.partie.plateau[ligne_cliquee][colonne_cliquee]
             if piece is not None and piece.couleur == self.partie.tour % 2:
                 self.case_selectionnee = (ligne_cliquee, colonne_cliquee)
@@ -476,19 +465,20 @@ class PanneauLateral(QWidget):
     COULEUR_ALEATOIRE = 2
 
     def __init__(self, partie: Partie, echelle_police:float):
+        """Initialise le panneau latéral avec les boutons de contrôle et l'historique des coups."""
         super().__init__()
         self.partie = partie
         self.echelle_police = echelle_police
         self.echiquier: Echiquier | None = None
 
-        # State
         self.mode = self.MODE_PVP
-        self.couleur_joueur = self.COULEUR_BLANC # 0 blanc, 1 noir, 2 aleatoire
+        self.couleur_joueur = self.COULEUR_BLANC  # 0 blanc, 1 noir, 2 aléatoire
         self.difficulte = 0
 
         self.ajouter_boutons()
 
     def _style_icone(self, cote: int, bg="#f5efe6", fg="#333", hover="#ead9c0", pressed="#d4b896") -> str:
+        """Retourne une feuille de style CSS pour un bouton carré de taille cote×cote."""
         taille_police = max(10, cote * 22 // 56)
         return f"""
             QPushButton {{
@@ -517,6 +507,7 @@ class PanneauLateral(QWidget):
         """
 
     def _style_jouer(self, hauteur: int) -> str:
+        """Retourne une feuille de style CSS pour le bouton Jouer/Rejouer (pleine largeur, vert)."""
         taille_police = max(8, hauteur * 16 // 40)
         return f"""
             QPushButton {{
@@ -539,7 +530,8 @@ class PanneauLateral(QWidget):
             }}
         """
 
-    def ajouter_boutons(self):
+    def ajouter_boutons(self) -> None:
+        """Construit et connecte tous les widgets du panneau (historique, boutons de contrôle, sauvegarde)."""
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(8)
@@ -575,7 +567,6 @@ class PanneauLateral(QWidget):
         self.btn_jouer.clicked.connect(self.on_jouer)
         layout.addWidget(self.btn_jouer)
 
-        # Ligne sauvegarder / charger
         io_layout = QHBoxLayout()
         io_layout.setSpacing(6)
         io_layout.setContentsMargins(0, 0, 0, 0)
@@ -596,7 +587,8 @@ class PanneauLateral(QWidget):
         self._appliquer_styles_boutons()
         self.rafraichir_boutons()
 
-    def _appliquer_styles_boutons(self):
+    def _appliquer_styles_boutons(self) -> None:
+        """Recalcule et applique les feuilles de style de tous les boutons selon la largeur actuelle."""
         largeur = self.width() or 200
         cote = max(30, min(largeur // 4, 80))
         hauteur_jouer = max(24, cote * 40 // 56)
@@ -605,30 +597,35 @@ class PanneauLateral(QWidget):
         self.btn_couleur.setStyleSheet(style)
         self.btn_difficulte.setStyleSheet(style)
         self.btn_jouer.setStyleSheet(self._style_jouer(hauteur_jouer))
+        # Boutons sauvegarder/charger : même style que Jouer mais en bleu
         style_io = self._style_jouer(max(22, hauteur_jouer * 3 // 4)).replace(
             "#4caf50", "#1976d2").replace("#43a047", "#1565c0").replace(
             "#388e3c", "#0d47a1").replace("#2d7a2d", "#0d47a1")
         self.btn_sauvegarder.setStyleSheet(style_io)
         self.btn_charger.setStyleSheet(style_io)
 
-    def resizeEvent(self, event):
+    def resizeEvent(self, event) -> None:
+        """Réajuste les styles des boutons à chaque redimensionnement."""
         super().resizeEvent(event)
         self._appliquer_styles_boutons()
 
-    def cycler_mode_jeu(self):
+    def cycler_mode_jeu(self) -> None:
+        """Bascule entre le mode PvP et le mode PvA, puis rafraîchit les boutons."""
         self.mode = self.MODE_PVA if self.mode == self.MODE_PVP else self.MODE_PVP
         self.rafraichir_boutons()
 
-    def cycler_couleur(self):
+    def cycler_couleur(self) -> None:
+        """Fait tourner la couleur du joueur humain (Blanc → Noir → Aléatoire → …)."""
         self.couleur_joueur = (self.couleur_joueur + 1) % 3
         self.rafraichir_boutons()
 
-    def cycler_difficulte(self):
+    def cycler_difficulte(self) -> None:
+        """Fait tourner le niveau de difficulté de l'IA (0–3 en boucle)."""
         self.difficulte = (self.difficulte + 1) % 4
         self.rafraichir_boutons()
 
-    def rafraichir_boutons(self):
-        # Mode button
+    def rafraichir_boutons(self) -> None:
+        """Met à jour les textes, icônes et états activés/désactivés de tous les boutons."""
         if self.mode == self.MODE_PVP:
             self.btn_mode.setText("👤")
             self.btn_mode.setToolTip("Mode : Joueur vs Joueur (cliquer pour activer l'IA)")
@@ -636,7 +633,6 @@ class PanneauLateral(QWidget):
             self.btn_mode.setText("🖥️")
             self.btn_mode.setToolTip("Mode : Joueur vs IA (cliquer pour revenir en PvP)")
 
-        # Colour button
         pva = (self.mode == self.MODE_PVA)
         self.btn_couleur.setEnabled(pva)
         self.btn_difficulte.setEnabled(pva)
@@ -644,15 +640,15 @@ class PanneauLateral(QWidget):
         tips = ["Jouer avec les Blancs", "Jouer avec les Noirs", "Couleur aléatoire"]
         self.btn_couleur.setText(icons[self.couleur_joueur])
         self.btn_couleur.setToolTip(tips[self.couleur_joueur])
-
-        # Difficulty button
         self.btn_difficulte.setText(str(self.difficulte))
         self.btn_difficulte.setToolTip(f"Difficulté IA : {self.difficulte}/4")
 
-    def mettre_a_jour_coups(self):
+    def mettre_a_jour_coups(self) -> None:
+        """Délègue la mise à jour de l'affichage à l'historique."""
         self.historique.mettre_a_jour_coups()
 
-    def on_sauvegarder(self):
+    def on_sauvegarder(self) -> None:
+        """Ouvre un dialogue de sauvegarde et écrit la partie en cours dans un fichier JSON."""
         if self.echiquier is None or not self.partie.historique:
             QMessageBox.information(self, "Sauvegarder", "Aucune partie en cours à sauvegarder.")
             return
@@ -666,7 +662,8 @@ class PanneauLateral(QWidget):
         except Exception as e:
             QMessageBox.critical(self, "Erreur", f"Impossible de sauvegarder :\n{e}")
 
-    def on_charger(self):
+    def on_charger(self) -> None:
+        """Ouvre un dialogue de chargement, rejoue la partie depuis le fichier et reprend l'IA si nécessaire."""
         if self.echiquier is None:
             return
         chemin, _ = QFileDialog.getOpenFileName(
@@ -680,11 +677,10 @@ class PanneauLateral(QWidget):
             QMessageBox.critical(self, "Erreur", f"Impossible de charger :\n{e}")
             return
 
-        # Arrêter proprement la partie en cours
         self.echiquier.en_jeu = False
         self.echiquier.tour_ia_en_cours = False
 
-        # Brancher la partie chargée
+        # Branchement de la partie chargée sur tous les widgets
         self.partie = nouvelle_partie
         self.historique.partie = nouvelle_partie
         self.echiquier.partie = nouvelle_partie
@@ -699,7 +695,6 @@ class PanneauLateral(QWidget):
         self.historique.mettre_a_jour_coups()
         self.btn_jouer.setText("Rejouer")
 
-        # Configurer l'IA selon les paramètres du panneau, comme on_jouer
         if self.mode == self.MODE_PVA:
             if self.couleur_joueur == self.COULEUR_ALEATOIRE:
                 couleur_humain = random.randint(0, 1)
@@ -712,13 +707,12 @@ class PanneauLateral(QWidget):
                 self.echiquier.ia = IARandom(0, nouvelle_partie)
             self.echiquier.couleur_ia = couleur_ia
 
-        # La partie chargée est jouable immédiatement
         self.echiquier.en_jeu = True
         self.echiquier.update()
-        # Si c'est le tour de l'IA dès le chargement, elle joue
         self.echiquier._planifier_coup_ia()
 
-    def on_jouer(self):
+    def on_jouer(self) -> None:
+        """Réinitialise la partie, configure l'IA selon les paramètres en cours et démarre."""
         if self.echiquier is None:
             return
         self.echiquier.en_jeu = False
@@ -753,6 +747,7 @@ class PanneauLateral(QWidget):
 
 class GUI(QMainWindow):
     def __init__(self, partie: Partie):
+        """Initialise la fenêtre principale en créant l'échiquier et le panneau latéral."""
         super().__init__()
         echelle_police = QGuiApplication.primaryScreen().logicalDotsPerInch() / 96.0
         self.partie = partie
@@ -761,7 +756,8 @@ class GUI(QMainWindow):
         self.panneau.echiquier = self.echiquier
         self.init_ui()
 
-    def init_ui(self):
+    def init_ui(self) -> None:
+        """Configure la fenêtre principale : disposition, style Fusion et taille initiale."""
         self.setWindowTitle('Échecs')
         self.setStyle(QStyleFactory.create('Fusion'))
 

@@ -9,12 +9,13 @@ class Dame(Piece):
         self.representation = "♛" if couleur else "♕"  # 0: Blanc ; 1: Noir
         self.type = 'D'
 
-    def cases_atteignables(self):
+    def cases_atteignables(self) -> list[tuple[int,int]]:
+        """Retourne les cases atteignables par la dame (8 directions, jusqu'à obstacle ou bord)."""
         L = []
         x, y = self.position
         directions = [
-            (1, 0), (-1, 0), (0, 1), (0, -1),   # tour
-            (1, 1), (1, -1), (-1, 1), (-1, -1)  # fou
+            (1, 0), (-1, 0), (0, 1), (0, -1),   # horizontales/verticales
+            (1, 1), (1, -1), (-1, 1), (-1, -1)  # diagonales
         ]
         for dx, dy in directions:
             k = 1
