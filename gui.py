@@ -1,12 +1,10 @@
 from PyQt5.QtWidgets import (
     QStyleFactory,
     QSizePolicy,
-    QApplication,
     QMainWindow,
     QWidget,
     QVBoxLayout,
     QHBoxLayout,
-    QInputDialog,
     QPlainTextEdit,
     QPushButton,
     QFileDialog,
@@ -32,7 +30,7 @@ import random
 class HistoriqueCoups(QPlainTextEdit):
     LIGNE_REFERENCE = "99. Da1xh8+++ Da8xh1+++"  # Ligne la plus large possible, pour calibrer la police
 
-    def __init__(self, partie: Partie, echelle_police: float):
+    def __init__(self, partie: Partie):
         """Initialise le widget d'historique en lecture seule et affiche les coups existants."""
         super().__init__()
         self.partie = partie
@@ -95,8 +93,6 @@ class HistoriqueCoups(QPlainTextEdit):
             texte += ligne_coup + "\n"
 
         self.setPlainText(texte)
-        if barre_defilement := self.verticalScrollBar():
-            barre_defilement.setValue(barre_defilement.maximum())
 
 class Echiquier(QWidget):
     def __init__(self, partie: Partie, historique_coups: HistoriqueCoups, echelle_police:float):
@@ -445,7 +441,6 @@ class Echiquier(QWidget):
                 self.case_selectionnee = None
 
         self.update()
-
 
 class PanneauLateral(QWidget):
     MODE_PVP = 0
