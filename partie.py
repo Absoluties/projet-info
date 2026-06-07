@@ -13,7 +13,10 @@ class Partie:
     def __init__(self):
         self.rois = {0: Roi(0, 4, 0, self), 1: Roi(7, 4, 1, self)}
 
-        self.roques_possibles = {0: [True, True], 1: [True, True]}  # [grand roque, petit roque]
+        self.roques_possibles = {
+            0: [True, True],
+            1: [True, True],
+        }  # [grand roque, petit roque]
 
         self.plateau: list[list[Piece | None]] = [
             [
@@ -65,7 +68,9 @@ class Partie:
         self.historique_str: list[str] = []
         self.tour: int = 0
 
-    def completer_coup_notation_abregee(self, position_arrivee: tuple[int, int], type_piece: str) -> tuple[tuple[int, int], tuple[int, int]]:
+    def completer_coup_notation_abregee(
+        self, position_arrivee: tuple[int, int], type_piece: str
+    ) -> tuple[tuple[int, int], tuple[int, int]]:
         """Trouve la pièce du type donné pouvant atteindre position_arrivee et retourne le coup complet."""
         for i in range(8):
             for j in range(8):
@@ -82,7 +87,9 @@ class Partie:
     def est_case(self, case: str) -> bool:
         """Retourne True si la chaîne représente une case valide en notation algébrique (ex: 'e4')."""
         if len(case) == 2:
-            return (ord("a") <= ord(case[0]) <= ord("h")) and (ord("1") <= ord(case[1]) <= ord("8"))
+            return (ord("a") <= ord(case[0]) <= ord("h")) and (
+                ord("1") <= ord(case[1]) <= ord("8")
+            )
         return False
 
     def verifier_syntaxe_coup(self, notation: str) -> bool:
@@ -96,7 +103,9 @@ class Partie:
             case 2:  # Coup de pion implicite (ex: e4)
                 return self.est_case(notation)
             case 3:  # Coup de pièce implicite (ex: Ce4)
-                return (notation[0] in initiales_pieces) and self.est_case(notation[1:3])
+                return (notation[0] in initiales_pieces) and self.est_case(
+                    notation[1:3]
+                )
             case 4:  # Coup de pion explicite (ex: e2e4)
                 return self.est_case(notation[0:2]) and self.est_case(notation[2:4])
             case 5:  # Coup de pièce explicite (ex: Cc3e4)
@@ -108,7 +117,9 @@ class Partie:
             case _:
                 return False
 
-    def verifier_validite_coup(self, coup: tuple[tuple[int, int], tuple[int, int]], type_piece: str) -> bool:
+    def verifier_validite_coup(
+        self, coup: tuple[tuple[int, int], tuple[int, int]], type_piece: str
+    ) -> bool:
         """Retourne True si le coup est légal pour une pièce du type donné appartenant au joueur actuel."""
         piece_sur_case: Piece | None = self.plateau[coup[0][0]][coup[0][1]]
         if (
@@ -120,7 +131,7 @@ class Partie:
             return True
         return False
 
-    def choisir_coup_cmd(self) -> tuple[tuple[tuple[int,int], tuple[int,int]], str]:
+    def choisir_coup_cmd(self) -> tuple[tuple[tuple[int, int], tuple[int, int]], str]:
         """Lit un coup en notation française depuis le terminal et retourne (coup, type_pièce).
 
         Notation acceptée (française, minuscules) :
@@ -129,7 +140,9 @@ class Partie:
         """
         while True:
             coup_notation = (
-                input(f'Tour des [{"NOIRS" if self.tour%2 else "BLANCS"}], choissisez un coup (notation standard) : ')
+                input(
+                    f'Tour des [{"NOIRS" if self.tour%2 else "BLANCS"}], choissisez un coup (notation standard) : '
+                )
                 .strip()
                 .lower()
                 .replace("-", "")
@@ -144,25 +157,41 @@ class Partie:
             coup_notation = "p" + coup_notation
 
         match coup_notation[0]:
-            case "p": type_piece = "P"
-            case "r": type_piece = "R"
-            case "d": type_piece = "D"
-            case "t": type_piece = "T"
-            case "f": type_piece = "F"
-            case "c": type_piece = "C"
-            case _: raise RuntimeError()
+            case "p":
+                type_piece = "P"
+            case "r":
+                type_piece = "R"
+            case "d":
+                type_piece = "D"
+            case "t":
+                type_piece = "T"
+            case "f":
+                type_piece = "F"
+            case "c":
+                type_piece = "C"
+            case _:
+                raise RuntimeError()
 
         coup_notation = coup_notation[1:]
         coup_machine_str = coup_notation[:2], coup_notation[2:]
 
         if not coup_machine_str[1]:
             # Notation abrégée : seule la case d'arrivée est fournie
-            position = (int(coup_machine_str[0][1]) - 1, ord(coup_machine_str[0][0]) - ord("a"))
+            position = (
+                int(coup_machine_str[0][1]) - 1,
+                ord(coup_machine_str[0][0]) - ord("a"),
+            )
             coup_machine = self.completer_coup_notation_abregee(position, type_piece)
         else:
             coup_machine = (
-                (int(coup_machine_str[0][1]) - 1, ord(coup_machine_str[0][0]) - ord("a")),
-                (int(coup_machine_str[1][1]) - 1, ord(coup_machine_str[1][0]) - ord("a")),
+                (
+                    int(coup_machine_str[0][1]) - 1,
+                    ord(coup_machine_str[0][0]) - ord("a"),
+                ),
+                (
+                    int(coup_machine_str[1][1]) - 1,
+                    ord(coup_machine_str[1][0]) - ord("a"),
+                ),
             )
 
         return coup_machine, type_piece
@@ -204,7 +233,9 @@ class Partie:
             separateur = "x"
         else:
             separateur = "-"
-        notations_cases: list[str] = [chr(case[1] + ord("a")) + str(case[0] + 1) for case in coup]
+        notations_cases: list[str] = [
+            chr(case[1] + ord("a")) + str(case[0] + 1) for case in coup
+        ]
         self.historique.append(coup)
         self.historique_str.append(
             f"{piece.type}{notations_cases[0]}{separateur}{notations_cases[1]}"
@@ -212,7 +243,9 @@ class Partie:
 
     def est_roque(self, piece: Piece, depart: tuple, arrivee: tuple) -> bool:
         """Retourne True si le coup est un roque (roi se déplaçant de deux cases)."""
-        return piece is not None and piece.type == "R" and abs(arrivee[1] - depart[1]) == 2
+        return (
+            piece is not None and piece.type == "R" and abs(arrivee[1] - depart[1]) == 2
+        )
 
     def est_en_passant(self, piece: Piece, depart: tuple, arrivee: tuple) -> bool:
         """Retourne True si le coup est une prise en passant (pion en diagonale vers case vide)."""
@@ -242,15 +275,21 @@ class Partie:
             self.roques_possibles[piece_depart.couleur] = [False, False]
         # Capturer la tour adverse sur sa case de départ révoque aussi le droit de roque
         if arrivee in ((0, 0), (0, 7), (7, 0), (7, 7)):
-            self.roques_possibles[(piece_depart.couleur + 1) % 2][arrivee[1] // 7] = False
+            self.roques_possibles[(piece_depart.couleur + 1) % 2][
+                arrivee[1] // 7
+            ] = False
 
         if self.est_en_passant(piece_depart, depart, arrivee):
             # Suppression du pion capturé en passant (il est sur la même rangée que le pion preneur)
             self.plateau[arrivee[0] - (-1) ** piece_depart.couleur][arrivee[1]] = None
 
         if self.est_roque(piece_depart, depart, arrivee):
-            y1 = 7 * (1 + (arrivee[1] - depart[1]) // 2) // 2 # colonne d'origine de la tour (0 ou 7)
-            y2 = depart[1] + (arrivee[1] - depart[1]) // 2 # colonne d'arrivée de la tour
+            y1 = (
+                7 * (1 + (arrivee[1] - depart[1]) // 2) // 2
+            )  # colonne d'origine de la tour (0 ou 7)
+            y2 = (
+                depart[1] + (arrivee[1] - depart[1]) // 2
+            )  # colonne d'arrivée de la tour
             # Positionnement de la tour
             self.plateau[depart[0]][y1], self.plateau[depart[0]][y2] = (
                 self.plateau[depart[0]][y2],
@@ -282,13 +321,14 @@ class Partie:
         if fin:
             print(f"Le joueur {('Blanc','Noir')[(self.tour-1)%2]} a gagné")
         else:
-            print('Égalité')
+            print("Égalité")
 
     def sauvegarder(self, chemin: str, promotions: list[str | None]) -> None:
         """Sauvegarde l'historique des coups et les promotions dans un fichier JSON."""
         data = {
             "historique": [
-                [[coup[0][0], coup[0][1]], [coup[1][0], coup[1][1]]] for coup in self.historique
+                [[coup[0][0], coup[0][1]], [coup[1][0], coup[1][1]]]
+                for coup in self.historique
             ],
             "promotions": promotions,
         }
@@ -314,8 +354,8 @@ class Partie:
                 piece = partie.plateau[arrivee[0]][arrivee[1]]
                 if piece is not None:
                     couleur = piece.couleur
-                    partie.plateau[arrivee[0]][arrivee[1]] = TYPE_VERS_CLASSE[type_promo](
-                        arrivee[0], arrivee[1], couleur, partie
-                    )
+                    partie.plateau[arrivee[0]][arrivee[1]] = TYPE_VERS_CLASSE[
+                        type_promo
+                    ](arrivee[0], arrivee[1], couleur, partie)
 
         return partie, promotions

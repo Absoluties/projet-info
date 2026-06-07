@@ -1,9 +1,7 @@
 import sys
-
 from PyQt5.QtWidgets import QApplication
 
 from partie import Partie
-
 from gui import GUI
 
 if __name__ == "__main__":

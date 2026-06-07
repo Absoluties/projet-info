@@ -12,7 +12,7 @@ class Cavalier(Piece):
         self.representation = "♞" if couleur else "♘"  # 0: Blanc ; 1: Noir
         self.type = "C"
 
-    def cases_atteignables(self) -> list[tuple[int,int]]:
+    def cases_atteignables(self) -> list[tuple[int, int]]:
         """Retourne les 8 cases en 'L' atteignables par le cavalier, en excluant les alliés et les sorties de plateau."""
         L = []
         i, j = self.position

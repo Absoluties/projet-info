@@ -1,21 +1,21 @@
 from piece import Piece
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from partie import Partie
 
+
 class Fou(Piece):
-    def __init__(self, x, y, couleur, partie:'Partie'):
+    def __init__(self, x, y, couleur, partie: "Partie"):
         super().__init__(x, y, couleur, partie)
         self.representation = "♝" if couleur else "♗"  # 0: Blanc ; 1: Noir
-        self.type = 'F'
+        self.type = "F"
 
-    def cases_atteignables(self) -> list[tuple[int,int]]:
+    def cases_atteignables(self) -> list[tuple[int, int]]:
         """Retourne les cases atteignables par le fou (diagonales, jusqu'à obstacle ou bord)."""
         L = []
         x, y = self.position
-        directions = [
-            (1, 1), (1, -1), (-1, 1), (-1, -1)
-        ]
+        directions = [(1, 1), (1, -1), (-1, 1), (-1, -1)]
         for dx, dy in directions:
             k = 1
             while True:

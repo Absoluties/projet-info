@@ -1,21 +1,29 @@
 from piece import Piece
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from partie import Partie
 
+
 class Dame(Piece):
-    def __init__(self, x, y, couleur, partie:'Partie'):
+    def __init__(self, x, y, couleur, partie: "Partie"):
         super().__init__(x, y, couleur, partie)
         self.representation = "♛" if couleur else "♕"  # 0: Blanc ; 1: Noir
-        self.type = 'D'
+        self.type = "D"
 
-    def cases_atteignables(self) -> list[tuple[int,int]]:
+    def cases_atteignables(self) -> list[tuple[int, int]]:
         """Retourne les cases atteignables par la dame (8 directions, jusqu'à obstacle ou bord)."""
         L = []
         x, y = self.position
         directions = [
-            (1, 0), (-1, 0), (0, 1), (0, -1),   # horizontales/verticales
-            (1, 1), (1, -1), (-1, 1), (-1, -1)  # diagonales
+            (1, 0),
+            (-1, 0),
+            (0, 1),
+            (0, -1),  # horizontales/verticales
+            (1, 1),
+            (1, -1),
+            (-1, 1),
+            (-1, -1),  # diagonales
         ]
         for dx, dy in directions:
             k = 1

@@ -1,9 +1,6 @@
 # écrit par Valentin
 import copy
-import sys
-import os
 from random import choice
-from piece import Piece
 from dame import Dame
 from tour import Tour
 from fou import Fou
