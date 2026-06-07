@@ -9,6 +9,7 @@ from piece import Piece
 from ia import IA
 from ia_random import IARandom
 from ia_ft import IA_fort
+import json
 
 
 class Partie:
@@ -227,17 +228,17 @@ class Partie:
         plateau_str += "    a   b   c   d   e   f   g   h\n"
         print(plateau_str)
 
-    def ajouter_historique(self, depart:tuple[int,int], arrivee:tuple[int,int], piece_depart:Piece, capture:bool, roque:bool, ep:bool) -> None:
-        self.historique.append((depart, arrivee))
-        if roque:
-            self.historique_str.append('O' + '-O'*(2-(arrivee[1] > depart[1])))
+    def ajouter_historique(self, coup: tuple[tuple, tuple]) -> None:
+        piece: Piece = self.plateau[coup[0][0]][coup[0][1]]
+        if self.plateau[coup[1][0]][coup[1][1]]:
+            separateur = "x"
         else:
-            separateur = 'x' if capture else '-'
-            mod = '+' * self.rois[self.tour%2].attaquee() + 'e.p' * ep
-            notations_cases: list[str] = [chr(case[1] + ord("a")) + str(case[0] + 1) for case in (depart, arrivee)]
-            self.historique_str.append(
-                f"{piece_depart.type}{notations_cases[0]}{separateur}{notations_cases[1]}{mod}"
-            )
+            separateur = "-"
+        notations_cases: list[str] = [chr(case[1] + ord("a")) + str(case[0] + 1) for case in coup]
+        self.historique.append(coup)
+        self.historique_str.append(
+            f"{piece.type}{notations_cases[0]}{separateur}{notations_cases[1]}"
+        )
         # print(f"Coup joué {self.historique_str[-1]}")
 
     def est_roque(self, piece: Piece, depart: tuple, arrivee: tuple) -> bool:
@@ -254,9 +255,10 @@ class Partie:
         )
 
     def jouer_coup(self, coup: tuple[tuple[int, int], tuple[int, int]]) -> None:
+        self.ajouter_historique(coup)
         depart, arrivee = coup
+
         piece_depart: Piece | None = self.plateau[depart[0]][depart[1]]
-        piece_arrivee: Piece | None = self.plateau[arrivee[0]][arrivee[1]]
 
         if piece_depart is None:
             return
@@ -271,12 +273,10 @@ class Partie:
         if arrivee in ((0, 0), (0, 7), (7, 0), (7, 7)):
             self.roques_possibles[(piece_depart.couleur + 1) % 2][arrivee[1] // 7] = False
 
-        ep = self.est_en_passant(piece_depart, depart, arrivee)
-        if ep:
+        if self.est_en_passant(piece_depart, depart, arrivee):
             self.plateau[arrivee[0] - (-1) ** piece_depart.couleur][arrivee[1]] = None
 
-        roque = self.est_roque(piece_depart, depart, arrivee)
-        if roque:
+        if self.est_roque(piece_depart, depart, arrivee):
             y1 = 7 * (1 + (arrivee[1] - depart[1]) // 2) // 2
             y2 = depart[1] + (arrivee[1] - depart[1]) // 2
             self.plateau[depart[0]][y1], self.plateau[depart[0]][y2] = (
@@ -288,11 +288,17 @@ class Partie:
         self.plateau[depart[0]][depart[1]] = None
 
         self.tour += 1
-        self.ajouter_historique(depart, arrivee, piece_depart, ep or piece_arrivee is not None, roque, ep)
 
-    def jouer_partie_cmd(self):
+    def jouer_partie_cmd(self, mode="cmd"):
         self.print_plateau()
+        ia = IA_fort(4, self)
         while not self.verifier_victoire():
+            if self.tour % 2 == 1:
+                print("Coup de l'IA")
+                coup = ia.choisir_coup()
+                self.jouer_coup(coup)
+                self.print_plateau()
+                continue
             while True:
                 coup, type_piece = self.choisir_coup_cmd()
                 if self.verifier_validite_coup(coup, type_piece):
@@ -301,3 +307,41 @@ class Partie:
             self.jouer_coup(coup)
             self.print_plateau()
         print(f"Le joueur {('Blanc','Noir')[(self.tour-1)%2]} a gagné")
+
+    def sauvegarder(self, chemin: str, promotions: list[str | None]) -> None:
+        """Sauvegarde la partie (historique + promotions) dans un fichier JSON."""
+        data = {
+            "historique": [
+                [[coup[0][0], coup[0][1]], [coup[1][0], coup[1][1]]] for coup in self.historique
+            ],
+            "promotions": promotions,
+        }
+        with open(chemin, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+
+    def charger(chemin: str) -> tuple["Partie", list[str | None]]:
+        """Charge une partie depuis un fichier JSON.
+        Retourne (nouvelle_partie_rejoueé, liste_promotions)."""
+        TYPE_VERS_CLASSE = {"D": Dame, "T": Tour, "F": Fou, "C": Cavalier}
+
+        with open(chemin, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        partie = Partie()
+        promotions: list[str | None] = data.get("promotions", [])
+
+        for i, coup_data in enumerate(data["historique"]):
+            coup = (tuple(coup_data[0]), tuple(coup_data[1]))
+            partie.jouer_coup(coup)
+            # Appliquer la promotion si nécessaire
+            type_promo = promotions[i] if i < len(promotions) else None
+            if type_promo is not None and type_promo in TYPE_VERS_CLASSE:
+                arrivee = coup[1]
+                piece = partie.plateau[arrivee[0]][arrivee[1]]
+                if piece is not None:
+                    couleur = piece.couleur
+                    partie.plateau[arrivee[0]][arrivee[1]] = TYPE_VERS_CLASSE[type_promo](
+                        arrivee[0], arrivee[1], couleur, partie
+                    )
+
+        return partie, promotions

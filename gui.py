@@ -8,7 +8,9 @@ from PyQt5.QtWidgets import (
     QHBoxLayout,
     QInputDialog,
     QPlainTextEdit,
-    QPushButton
+    QPushButton,
+    QFileDialog,
+    QMessageBox,
 )
 from PyQt5.QtCore import Qt, QSize, QRectF, QTimer
 from PyQt5.QtGui import QPainter, QColor, QFont, QFontMetrics, QMouseEvent
@@ -23,7 +25,7 @@ from dame import Dame
 from tour import Tour
 from fou import Fou
 from cavalier import Cavalier
-from ia_fort_opti import IA_fort
+from ia_fort import IA_fort
 from ia_random import IARandom
 import random
 
@@ -37,10 +39,16 @@ class HistoriqueCoups(QPlainTextEdit):
         self.setMinimumWidth(200)
         self.setLineWrapMode(QPlainTextEdit.NoWrap)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self._taille_police_courante = -1
         self._appliquer_style(8)
         self.mettre_a_jour_coups()
 
     def _appliquer_style(self, taille_pt: int):
+        if taille_pt == self._taille_police_courante:
+            return
+        self._taille_police_courante = taille_pt
         self.setStyleSheet(f"""
             QPlainTextEdit {{
                 background-color: #f5f5f5;
@@ -102,6 +110,8 @@ class Echiquier(QWidget):
         self.ia = None
         self.couleur_ia = None
         self.tour_ia_en_cours = False
+        self.message_fin: str | None = None
+        self.promotions: list[str | None] = []  # type promu par coup, None si pas de promotion
         self.init_ui()
 
     def init_ui(self):
@@ -194,6 +204,7 @@ class Echiquier(QWidget):
         self.dessiner_pieces(peintre)
         self.dessiner_surbrillances(peintre)
         self.dessiner_promotion(peintre)
+        self._dessiner_overlay_fin(peintre)
 
     def dessiner_pieces(self, peintre: QPainter):
         padding = int(self.taille_case * 0.05)
@@ -234,10 +245,7 @@ class Echiquier(QWidget):
 
             piece_cible = self.partie.plateau[ligne_cible][colonne_cible]
             if piece_cible is None:
-                if piece.type == 'P' and colonne_cible != colonne: # Le pion mange s'il se déplace en diagonale
-                    couleur = QColor(255, 0, 0, 100)
-                else:
-                    couleur = QColor(0, 0, 255, 100)  # Bleu pour les cases vides
+                couleur = QColor(0, 0, 255, 100)  # Bleu pour les cases vides
             else:
                 couleur = QColor(255, 0, 0, 100)  # Rouge pour les cases occupées
 
@@ -286,6 +294,52 @@ class Echiquier(QWidget):
                 piece_temp.representation,
             )
 
+    def _verifier_fin(self) -> bool:
+        """Vérifie mat et pat. Pose message_fin et arrête le jeu si terminé. Retourne True si fin."""
+        partie = self.partie
+        roi = partie.rois[partie.tour % 2]
+        couleur_joueur = ('Blancs', 'Noirs')[partie.tour % 2]
+        couleur_gagnant = ('Noirs', 'Blancs')[partie.tour % 2]
+
+        # Aucun coup légal disponible ?
+        aucun_coup = all(
+            not piece.cases_atteignables()
+            for ligne in partie.plateau
+            for piece in ligne
+            if piece is not None and piece.couleur == partie.tour % 2
+        )
+        if not aucun_coup:
+            return False
+
+        if roi.attaquee():
+            self.message_fin = f"Échec et mat !\n{couleur_gagnant} gagnent."
+        else:
+            self.message_fin = "Pat !\nPartie nulle."
+
+        self.en_jeu = False
+        self.tour_ia_en_cours = False
+        self.update()
+        return True
+
+    def _dessiner_overlay_fin(self, peintre: QPainter):
+        if self.message_fin is None:
+            return
+        taille_plateau = 8 * self.taille_case
+        x = self.taille_etiquette
+        y = self.taille_etiquette
+        # Fond semi-transparent
+        peintre.fillRect(x, y, taille_plateau, taille_plateau, QColor(0, 0, 0, 160))
+        # Texte centré
+        taille_police = max(12, self.taille_case * 28 // 60)
+        police = QFont("Arial", taille_police, QFont.Bold)
+        peintre.setFont(police)
+        peintre.setPen(QColor(255, 220, 60))
+        peintre.drawText(
+            x, y, taille_plateau, taille_plateau,
+            Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter,
+            self.message_fin,
+        )
+
     def _planifier_coup_ia(self):
         if self.ia is None:
             return
@@ -305,10 +359,22 @@ class Echiquier(QWidget):
         if coup is None:
             self.tour_ia_en_cours = False
             return
+        depart, arrivee = coup
         self.partie.jouer_coup(coup)
+        # Promotion automatique en dame si un pion de l'IA atteint la dernière rangée
+        piece = self.partie.plateau[arrivee[0]][arrivee[1]]
+        type_promo = None
+        if isinstance(piece, Pion):
+            ligne_promo = 7 if piece.couleur == 0 else 0
+            if arrivee[0] == ligne_promo:
+                self.partie.plateau[arrivee[0]][arrivee[1]] = Dame(arrivee[0], arrivee[1], piece.couleur, self.partie)
+                type_promo = "D"
+        self.promotions.append(type_promo)
         if self.historique_coups:
             self.historique_coups.mettre_a_jour_coups()
         self.tour_ia_en_cours = False
+        if self._verifier_fin():
+            return
         self.update()
 
     def mousePressEvent(self, a0: QMouseEvent | None):
@@ -338,10 +404,14 @@ class Echiquier(QWidget):
                         classe_piece = self.pieces_promotion[i]
                         piece_promue = classe_piece(self.ligne_promotion, self.colonne_promotion, couleur,self.partie)
                         self.partie.plateau[self.ligne_promotion][self.colonne_promotion] = piece_promue
+                        if self.promotions:
+                            self.promotions[-1] = piece_promue.type  # remplace le None posé au jouer_coup
                         self.en_promotion = False
                         self.case_selectionnee = None
                         if self.historique_coups:
                             self.historique_coups.mettre_a_jour_coups()
+                        if self._verifier_fin():
+                            return
                         self.update()
                         self._planifier_coup_ia()
                         return
@@ -369,6 +439,7 @@ class Echiquier(QWidget):
                             est_blanc = piece_deplacee.couleur == 0
                             ligne_promo = 7 if est_blanc else 0
                             if ligne_cliquee == ligne_promo:
+                                self.promotions.append(None)  # sera mis à jour au choix
                                 self.en_promotion = True
                                 self.ligne_promotion = ligne_cliquee
                                 self.colonne_promotion = colonne_cliquee
@@ -376,9 +447,12 @@ class Echiquier(QWidget):
                                 self.update()
                                 return
 
+                        self.promotions.append(None)  # coup sans promotion
                         if self.historique_coups:
                             self.historique_coups.mettre_a_jour_coups()
                         self.case_selectionnee = None
+                        if self._verifier_fin():
+                            return
                         self.update()
                         self._planifier_coup_ia()
                         return
@@ -501,6 +575,23 @@ class PanneauLateral(QWidget):
         self.btn_jouer.clicked.connect(self.on_jouer)
         layout.addWidget(self.btn_jouer)
 
+        # Ligne sauvegarder / charger
+        io_layout = QHBoxLayout()
+        io_layout.setSpacing(6)
+        io_layout.setContentsMargins(0, 0, 0, 0)
+
+        self.btn_sauvegarder = QPushButton("💾 Sauvegarder")
+        self.btn_sauvegarder.setToolTip("Sauvegarder la partie en cours")
+        self.btn_sauvegarder.clicked.connect(self.on_sauvegarder)
+
+        self.btn_charger = QPushButton("📂 Charger")
+        self.btn_charger.setToolTip("Charger une partie sauvegardée")
+        self.btn_charger.clicked.connect(self.on_charger)
+
+        io_layout.addWidget(self.btn_sauvegarder)
+        io_layout.addWidget(self.btn_charger)
+        layout.addLayout(io_layout)
+
         self.setMinimumWidth(150)
         self._appliquer_styles_boutons()
         self.rafraichir_boutons()
@@ -514,6 +605,11 @@ class PanneauLateral(QWidget):
         self.btn_couleur.setStyleSheet(style)
         self.btn_difficulte.setStyleSheet(style)
         self.btn_jouer.setStyleSheet(self._style_jouer(hauteur_jouer))
+        style_io = self._style_jouer(max(22, hauteur_jouer * 3 // 4)).replace(
+            "#4caf50", "#1976d2").replace("#43a047", "#1565c0").replace(
+            "#388e3c", "#0d47a1").replace("#2d7a2d", "#0d47a1")
+        self.btn_sauvegarder.setStyleSheet(style_io)
+        self.btn_charger.setStyleSheet(style_io)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -556,6 +652,72 @@ class PanneauLateral(QWidget):
     def mettre_a_jour_coups(self):
         self.historique.mettre_a_jour_coups()
 
+    def on_sauvegarder(self):
+        if self.echiquier is None or not self.partie.historique:
+            QMessageBox.information(self, "Sauvegarder", "Aucune partie en cours à sauvegarder.")
+            return
+        chemin, _ = QFileDialog.getSaveFileName(
+            self, "Sauvegarder la partie", "", "Parties d'échecs (*.json);;Tous les fichiers (*)"
+        )
+        if not chemin:
+            return
+        try:
+            self.partie.sauvegarder(chemin, self.echiquier.promotions)
+        except Exception as e:
+            QMessageBox.critical(self, "Erreur", f"Impossible de sauvegarder :\n{e}")
+
+    def on_charger(self):
+        if self.echiquier is None:
+            return
+        chemin, _ = QFileDialog.getOpenFileName(
+            self, "Charger une partie", "", "Parties d'échecs (*.json);;Tous les fichiers (*)"
+        )
+        if not chemin:
+            return
+        try:
+            nouvelle_partie, promotions = Partie.charger(chemin)
+        except Exception as e:
+            QMessageBox.critical(self, "Erreur", f"Impossible de charger :\n{e}")
+            return
+
+        # Arrêter proprement la partie en cours
+        self.echiquier.en_jeu = False
+        self.echiquier.tour_ia_en_cours = False
+
+        # Brancher la partie chargée
+        self.partie = nouvelle_partie
+        self.historique.partie = nouvelle_partie
+        self.echiquier.partie = nouvelle_partie
+        self.echiquier.historique_coups = self.historique
+        self.echiquier.promotions = promotions
+        self.echiquier.case_selectionnee = None
+        self.echiquier.en_promotion = False
+        self.echiquier.message_fin = None
+        self.echiquier.ia = None
+        self.echiquier.couleur_ia = None
+
+        self.historique.mettre_a_jour_coups()
+        self.btn_jouer.setText("Rejouer")
+
+        # Configurer l'IA selon les paramètres du panneau, comme on_jouer
+        if self.mode == self.MODE_PVA:
+            if self.couleur_joueur == self.COULEUR_ALEATOIRE:
+                couleur_humain = random.randint(0, 1)
+            else:
+                couleur_humain = self.couleur_joueur
+            couleur_ia = 1 - couleur_humain
+            if self.difficulte:
+                self.echiquier.ia = IA_fort(self.difficulte, nouvelle_partie)
+            else:
+                self.echiquier.ia = IARandom(0, nouvelle_partie)
+            self.echiquier.couleur_ia = couleur_ia
+
+        # La partie chargée est jouable immédiatement
+        self.echiquier.en_jeu = True
+        self.echiquier.update()
+        # Si c'est le tour de l'IA dès le chargement, elle joue
+        self.echiquier._planifier_coup_ia()
+
     def on_jouer(self):
         if self.echiquier is None:
             return
@@ -569,6 +731,8 @@ class PanneauLateral(QWidget):
         self.historique.mettre_a_jour_coups()
         self.echiquier.case_selectionnee = None
         self.echiquier.en_promotion = False
+        self.echiquier.message_fin = None
+        self.echiquier.promotions = []
         self.echiquier.ia = None
         self.echiquier.couleur_ia = None
         if self.mode == self.MODE_PVA:
