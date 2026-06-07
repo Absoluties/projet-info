@@ -258,6 +258,9 @@ class Partie:
                 self.plateau[depart[0]][y2],
                 self.plateau[depart[0]][y1],
             )
+            tour_piece = self.plateau[depart[0]][y2]
+            if tour_piece is not None:
+                tour_piece.position = (depart[0], y2)
 
         self.plateau[arrivee[0]][arrivee[1]] = self.plateau[depart[0]][depart[1]]
         self.plateau[depart[0]][depart[1]] = None

@@ -641,7 +641,7 @@ class PanneauLateral(QWidget):
         self.btn_couleur.setText(icons[self.couleur_joueur])
         self.btn_couleur.setToolTip(tips[self.couleur_joueur])
         self.btn_difficulte.setText(str(self.difficulte))
-        self.btn_difficulte.setToolTip(f"Difficulté IA : {self.difficulte}/4")
+        self.btn_difficulte.setToolTip(f"Difficulté IA : {self.difficulte}/3")
 
     def mettre_a_jour_coups(self) -> None:
         """Délègue la mise à jour de l'affichage à l'historique."""
