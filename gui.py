@@ -522,7 +522,7 @@ class PanneauLateral(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(8)
 
-        self.historique = HistoriqueCoups(self.partie, self.echelle_police)
+        self.historique = HistoriqueCoups(self.partie)
         layout.addWidget(self.historique, stretch=1)
 
         boutons_layout = QHBoxLayout()
