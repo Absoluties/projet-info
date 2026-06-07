@@ -251,10 +251,12 @@ class Partie:
         if self.est_roque(piece_depart, depart, arrivee):
             y1 = 7 * (1 + (arrivee[1] - depart[1]) // 2) // 2 # colonne d'origine de la tour (0 ou 7)
             y2 = depart[1] + (arrivee[1] - depart[1]) // 2 # colonne d'arrivée de la tour
+            # Positionnement de la tour
             self.plateau[depart[0]][y1], self.plateau[depart[0]][y2] = (
                 self.plateau[depart[0]][y2],
                 self.plateau[depart[0]][y1],
             )
+            # Et mise à jour de sa position
             tour_piece = self.plateau[depart[0]][y2]
             if tour_piece is not None:
                 tour_piece.position = (depart[0], y2)
