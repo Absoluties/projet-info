@@ -13,7 +13,6 @@ import unittest
 from partie import Partie
 from piece import Piece
 from pion import Pion
-import pion
 from roi import Roi
 from dame import Dame
 from tour import Tour
