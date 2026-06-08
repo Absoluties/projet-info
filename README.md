@@ -1,8 +1,8 @@
-### Projet Informatique - Jeu d'échecs
+### Ce dépot est consacré à un projet informatique de première année à l'ENSTA campus de Brest.
 
 ##### Prérequis
 
-- Python 3.6+ installé sur votre machine
+- Python 3.10+ installé sur votre machine
 
 ---
 ### Lancement
