@@ -1,4 +1,3 @@
-# Auteur : Valentin
 from piece import Piece
 from typing import TYPE_CHECKING
 
@@ -7,6 +6,7 @@ if TYPE_CHECKING:
 
 
 class Cavalier(Piece):
+    """Auteur : Valentin"""
     def __init__(self, x, y, couleur, partie: "Partie"):
         super().__init__(x, y, couleur, partie)
         self.representation = "♞" if couleur else "♘"  # 0: Blanc ; 1: Noir

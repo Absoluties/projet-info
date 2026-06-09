@@ -1,4 +1,3 @@
-# Auteur : Aidan
 from piece import Piece
 from pion import Pion
 from roi import Roi
@@ -11,6 +10,7 @@ import json
 
 
 class Partie:
+    """Auteur : Aidan"""
     def __init__(self):
         self.rois = {0: Roi(0, 4, 0, self), 1: Roi(7, 4, 1, self)}
 

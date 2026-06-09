@@ -1,4 +1,4 @@
-# Auteur : Aidan
+
 """
 Tests unitaires — Jeu d'échecs
 ==============================
@@ -7,6 +7,8 @@ Méthodes testées :
   2. Partie.jouer_coup                   — met à jour le plateau, l'historique et le tour
   3. Partie.est_en_passant / est_roque   — détection des règles spéciales
   4. IA_fort._evaluer                    — fonction d'évaluation positionnelle
+==============================
+Auteur : Aidan
 """
 
 import unittest

@@ -1,4 +1,4 @@
-# Auteur : Valentin
+
 from typing import TYPE_CHECKING
 from piece import Piece
 from abc import abstractmethod, ABC
@@ -8,7 +8,9 @@ if TYPE_CHECKING:
 
 
 class IA(ABC):
-    """Classe abstraite définissant l'interface commune à toutes les IA."""
+    """Classe abstraite définissant l'interface commune à toutes les IA.
+    Auteur : Valentin
+    """
 
     def __init__(self, niveau: int, partie: "Partie"):
         self.partie = partie
