@@ -1,3 +1,4 @@
+# Auteur : Valentin
 from piece import Piece
 from typing import TYPE_CHECKING
 

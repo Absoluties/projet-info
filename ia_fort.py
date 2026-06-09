@@ -1,4 +1,4 @@
-# écrit par Valentin
+# Auteur : Valentin
 import copy
 from random import choice
 from dame import Dame

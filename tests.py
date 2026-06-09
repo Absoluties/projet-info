@@ -1,3 +1,4 @@
+# Auteur : Aidan
 """
 Tests unitaires — Jeu d'échecs
 ==============================

@@ -1,3 +1,4 @@
+# Auteur : Valentin
 from ia import IA
 from random import choice, choices
 from piece import Piece

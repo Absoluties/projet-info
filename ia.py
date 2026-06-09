@@ -1,4 +1,4 @@
-# écrit par Valentin
+# Auteur : Valentin
 from typing import TYPE_CHECKING
 from piece import Piece
 from abc import abstractmethod, ABC

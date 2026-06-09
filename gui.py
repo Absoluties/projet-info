@@ -1,3 +1,4 @@
+# Auteur : Aidan
 from PyQt5.QtWidgets import (
     QStyleFactory,
     QSizePolicy,

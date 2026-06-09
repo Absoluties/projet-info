@@ -1,3 +1,4 @@
+# Auteur : Aidan
 from piece import Piece
 from pion import Pion
 from roi import Roi
