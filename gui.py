@@ -1,4 +1,3 @@
-# Auteur : Aidan
 from PyQt5.QtWidgets import (
     QStyleFactory,
     QSizePolicy,
@@ -30,6 +29,7 @@ import random
 
 
 class HistoriqueCoups(QPlainTextEdit):
+    """Auteur : Aidan"""
     LIGNE_REFERENCE = "99. Da1xh8+++ Da8xh1+++"  # Ligne la plus large possible, pour calibrer la police
 
     def __init__(self, partie: Partie):
@@ -98,6 +98,7 @@ class HistoriqueCoups(QPlainTextEdit):
 
 
 class Echiquier(QWidget):
+    """Auteur : Aidan"""
     def __init__(
         self, partie: Partie, historique_coups: HistoriqueCoups, echelle_police: float
     ):
@@ -508,6 +509,7 @@ class Echiquier(QWidget):
 
 
 class PanneauLateral(QWidget):
+    """Auteur : Aidan"""
     MODE_PVP = 0
     MODE_PVA = 1
 
@@ -816,6 +818,7 @@ class PanneauLateral(QWidget):
 
 
 class GUI(QMainWindow):
+    """Auteur : Aidan"""
     def __init__(self, partie: Partie):
         """Initialise la fenêtre principale en créant l'échiquier et le panneau latéral."""
         super().__init__()

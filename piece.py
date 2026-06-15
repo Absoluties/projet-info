@@ -1,4 +1,4 @@
-# Auteur : Valentin
+
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
@@ -7,6 +7,7 @@ if TYPE_CHECKING:
 
 
 class Piece(ABC):
+    """Auteur : Valentin"""
     def __init__(self, x: int, y: int, couleur: int, partie: "Partie"):
         self.position = (x, y)
         self.couleur = couleur  # 0 = Blanc, 1 = Noir

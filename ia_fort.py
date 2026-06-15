@@ -1,4 +1,3 @@
-# Auteur : Valentin
 import copy
 from random import choice
 from dame import Dame
@@ -14,7 +13,9 @@ if TYPE_CHECKING:
 
 
 class IA_fort(IA):
-    """IA utilisant l'algorithme minimax avec élagage alpha-bêta."""
+    """IA utilisant l'algorithme minimax avec élagage alpha-bêta.
+    Auteur : Valentin
+    """
 
     def __init__(self, niveau: int, partie: "Partie"):
         super().__init__(niveau, partie)

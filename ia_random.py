@@ -1,10 +1,15 @@
-# Auteur : Valentin
 from ia import IA
 from random import choice, choices
 from piece import Piece
 
 
 class IARandom(IA):
+    """IA choisissant un coup aléatoire pondéré par le nombre de coups disponibles de chaque pièce.
+    Auteur : Valentin"""
+    
+    def __init__(self, niveau: int, partie: "Partie"):
+        super().__init__(niveau, partie)
+    
     def choisir_coup(self) -> tuple[tuple[int, int], tuple[int, int]]:
         """Choisit un coup aléatoire pondéré par le nombre de coups disponibles de chaque pièce."""
         pieces_candidates: list[Piece] = []
