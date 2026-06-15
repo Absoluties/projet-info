@@ -39,17 +39,17 @@ class IA_fort(IA):
 
     def _evaluer(self, partie_etat: "Partie", couleur_ia: int) -> int:
         """Évalue la position : somme des valeurs matérielles avec bonus positionnels (centralisation, développement)."""
-        valeurs = {"P": 10, "C": 30, "F": 30, "T": 50, "D": 90, "R": 900}
+        valeurs = {"P": 10, "C": 30, "F": 30, "T": 50, "D": 90, "R": 1000000000}
 
         # Distance de Chebyshev au centre (cases e4/d4/e5/d5) : vaut 3 au centre, 0 au coin
         def bonus_centre(i, j):
             return max(0, 3 - max(abs(i - 3.5), abs(j - 3.5)))
 
         # Cases de départ des pièces mineures (cavaliers, fous) par couleur
-        cases_depart = {
-            0: {(0, 1), (0, 2), (0, 5), (0, 6)},  # blancs
-            1: {(7, 1), (7, 2), (7, 5), (7, 6)},  # noirs
-        }
+        cases_depart = [
+            {(0, 1), (0, 2), (0, 5), (0, 6)},  # blancs
+            {(7, 1), (7, 2), (7, 5), (7, 6)},  # noirs
+        ]
 
         score = 0
         for i in range(8):
@@ -63,8 +63,8 @@ class IA_fort(IA):
                 if piece.type != "R":
                     positional += bonus_centre(i, j)
 
-                # Malus si cavalier/fou encore sur sa case de départ
-                if piece.type in ("C", "F") and (i, j) in cases_depart[piece.couleur]:
+                # Malus si cavalier/fou encore sur sa case de départ après les 3 premiers tours
+                if partie_etat.tour > 3 and piece.type in ("C", "F") and (i, j) in cases_depart[piece.couleur]:
                     positional -= 2
 
                 if piece.couleur == couleur_ia:
@@ -164,7 +164,7 @@ class IA_fort(IA):
         if profondeur == 0 or not coups_legaux:
             if not coups_legaux:
                 roi = partie_etat.rois[couleur_actuelle]
-                if roi.attaquee():
+                if partie_etat.echecs:
                     # Favoriser les mats plus rapides via la profondeur résiduelle
                     return -10000 - profondeur if est_max else 10000 + profondeur
                 else:

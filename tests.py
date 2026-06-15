@@ -326,7 +326,6 @@ class TestReglesSpeciales(unittest.TestCase):
             "Une tour déplacée de deux cases ne constitue pas un roque",
         )
 
-
 # 4. IA_fort._evaluer
 class TestIAFortEvaluer(unittest.TestCase):
     """

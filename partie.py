@@ -12,12 +12,13 @@ import json
 
 class Partie:
     def __init__(self):
-        self.rois = {0: Roi(0, 4, 0, self), 1: Roi(7, 4, 1, self)}
-
-        self.roques_possibles = {
-            0: [True, True],
-            1: [True, True],
-        }  # [grand roque, petit roque]
+        self.rois = [Roi(0, 4, 0, self), Roi(7, 4, 1, self)]
+        self.echecs = []
+        self.cases_blocage = []
+        self.roques_possibles = [
+            [True, True], # [grand roque, petit roque]
+            [True, True]
+        ]
 
         self.plateau: list[list[Piece | None]] = [
             [
@@ -257,6 +258,24 @@ class Partie:
             and self.plateau[arrivee[0]][arrivee[1]] is None
         )
 
+    def generer_cases_blocage(self):
+        '''Cette méthode génère toutes les cases possibles pour bloquer un échec.'''
+        attaquant:Piece = self.echecs[0]
+        cases = [attaquant.position]
+        if attaquant.type in ('F', 'T', 'D'):
+            xr, yr = self.rois[self.tour%2].position
+            xa, ya = attaquant.position
+            dx, dy = (
+                (xa-xr) // max(1, abs(xa-xr)),
+                (ya-yr) // max(1, abs(ya-yr))
+                )
+            x, y = xa - dx, ya - dy
+            while (x,y) != (xr, yr):
+                cases.append((x,y))
+                x -= dx
+                y -= dy
+        return cases
+
     def jouer_coup(self, coup: tuple[tuple[int, int], tuple[int, int]]) -> None:
         """Applique le coup sur le plateau en gérant le roque et la prise en passant."""
         self.ajouter_historique(coup)
@@ -305,6 +324,10 @@ class Partie:
         self.plateau[depart[0]][depart[1]] = None
 
         self.tour += 1
+
+        self.echecs = self.rois[self.tour%2].attaquee()
+        if len(self.echecs) == 1:
+            self.cases_blocage = self.generer_cases_blocage()
 
     def jouer_partie_cmd(self, mode="cmd") -> None:
         """Lance une partie en ligne de commande (méthode de débogage utilisée avant que l'interface graphique soit implémentée)."""
